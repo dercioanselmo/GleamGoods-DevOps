@@ -73,7 +73,7 @@ Cart - A service implemented using Java and data persisted using DynamoDB, is th
  - DynamoDB
 
 Application CICD
-CD
+CI
 GitHub
 GitHub Action
  - SAST and SCA
@@ -84,7 +84,7 @@ GitHub Action
 ECR
 
 CD 
- With ArgoCD
+ With ArgoCD - Argo Rollout, Canary strategy
 
 Terraform CICD with Github and GitHub Action
 - IaC vulnerability scan (Trivy or TBD)
