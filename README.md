@@ -28,9 +28,12 @@ For the cluster
  - EKS cluster with multi-AZ worker nodes
    - AWS Load Balancer Controller
    - Karpenter dynamic node provisioning
+    - On Demand Ec2 Instances
+    - Spot EC2 Instances
    - Horizontal Pod Autoscaler (HPA)
    - ExternalDNS with Amazon Route 53
-   - Helm-based application deployments
+   - 
+   - Helm
  - IAM Roles  and Policies, 
  - Load Balancer, 
  - Secret Manager, 
@@ -54,6 +57,9 @@ Observability:
  - Prometheus Node Explorer
  - Grafana
 
+ ArgoCD
+  - Install and configure ready for when the Helm Charts are ready to go 
+
 For the Application Microservices:
 UI - A Java service providing the frontend for the GleamGoods, serving the HTML UI and aggregating calls to the backend API components.
 Orders - Java service providing an API for storing orders with persistence using PostgreSQL.
@@ -66,7 +72,31 @@ Catalog - Implemented with Go and data persisted with MySQL, provides an API for
 Cart - A service implemented using Java and data persisted using DynamoDB, is the API for storing customer shopping carts.
  - DynamoDB
 
-CICD
+Application CICD
+CD
+GitHub
+GitHub Action
+ - SAST and SCA
+    - SonarCloud, 
+    - Dependency Scan 
+    - Image Scan
+    - CVE Scan
+ECR
 
+CD 
+ With ArgoCD
 
+Terraform CICD with Github and GitHub Action
+- IaC vulnerability scan (Trivy or TBD)
+- Terraform Apply manual Approval
+- Terraform delete manual Approval
 
+Application Helm Charts Manifest for each service
+ - Define the Kubernetes artifacts necessary to run the application.
+   - deployment, with all the details like replicas, necessary resources CPU and Memory, and define it's limits
+   - ConfigMaps and Secrets (Still just for my local test)
+   - Service, etc
+   - Apply and test the Application with port-forward
+ - 
+
+ Load generator
