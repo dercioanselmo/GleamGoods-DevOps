@@ -94,23 +94,78 @@ variable "tags" {
 # EKS Node Group Configuration
 # --------------------------------------------------------
 
-# EC2 instance types for worker nodes
 variable "node_instance_types" {
   description = "List of EC2 instance types for the node group"
   type        = list(string)
   default     = ["t3.medium"]
 }
 
-# Capacity type for node group (ON_DEMAND or SPOT)
 variable "node_capacity_type" {
   description = "Instance capacity type: ON_DEMAND or SPOT"
   type        = string
   default     = "ON_DEMAND"
 }
 
-# Root volume size (GiB) for worker nodes
 variable "node_disk_size" {
   description = "Disk size in GiB for worker nodes"
   type        = number
   default     = 20
+}
+
+variable "node_ami_type" {
+  description = "AMI type for worker nodes (e.g. AL2023_x86_64_STANDARD, AL2_x86_64)"
+  type        = string
+  default     = "AL2023_x86_64_STANDARD"
+}
+
+variable "node_desired_size" {
+  description = "Desired number of worker nodes"
+  type        = number
+  default     = 3
+}
+
+variable "node_min_size" {
+  description = "Minimum number of worker nodes"
+  type        = number
+  default     = 1
+}
+
+variable "node_max_size" {
+  description = "Maximum number of worker nodes"
+  type        = number
+  default     = 6
+}
+
+variable "node_max_unavailable_percentage" {
+  description = "Max percentage of nodes unavailable during node group update"
+  type        = number
+  default     = 33
+}
+
+variable "node_force_update_version" {
+  description = "Force node group update when EKS AMI version changes"
+  type        = bool
+  default     = true
+}
+
+# --------------------------------------------------------
+# EKS Cluster Access & Logging
+# --------------------------------------------------------
+
+variable "cluster_authentication_mode" {
+  description = "Authentication mode for EKS cluster: CONFIG_MAP, API, or API_AND_CONFIG_MAP"
+  type        = string
+  default     = "API_AND_CONFIG_MAP"
+}
+
+variable "cluster_bootstrap_admin_permissions" {
+  description = "Grant cluster-admin permissions to the cluster creator"
+  type        = bool
+  default     = true
+}
+
+variable "cluster_log_types" {
+  description = "List of EKS control plane log types to enable"
+  type        = list(string)
+  default     = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 }

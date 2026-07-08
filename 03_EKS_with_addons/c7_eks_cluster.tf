@@ -33,13 +33,7 @@ resource "aws_eks_cluster" "main" {
   }
 
   # Enable EKS control plane logging for visibility and debugging
-  enabled_cluster_log_types = [
-    "api",                 # API server audit logs
-    "audit",               # Kubernetes audit logs
-    "authenticator",       # Authenticator logs for IAM auth
-    "controllerManager",   # Logs for controller manager
-    "scheduler"            # Logs for pod scheduling
-  ]
+  enabled_cluster_log_types = var.cluster_log_types
 
   # Ensure IAM policy attachments complete before cluster creation
   # Helps avoid race conditions during provisioning and destroy
@@ -70,8 +64,8 @@ resource "aws_eks_cluster" "main" {
   # - And we guarantee (the creator) always have admin access
   # ----------------------------------------------------------------------------
   access_config {
-    authentication_mode = "API_AND_CONFIG_MAP" # Three options: CONFIG_MAP, API, API_AND_CONFIG_MAP
-    bootstrap_cluster_creator_admin_permissions = true
+    authentication_mode                         = var.cluster_authentication_mode
+    bootstrap_cluster_creator_admin_permissions = var.cluster_bootstrap_admin_permissions
   }
 
 }
