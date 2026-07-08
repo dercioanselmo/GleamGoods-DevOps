@@ -147,6 +147,7 @@ Each microservice includes Helm chart with:
 
 
 ---
+
 # Implementation Roadmap
 
 ## Phase 1 - Project Setup
@@ -155,8 +156,8 @@ Each microservice includes Helm chart with:
 - [ ] 03 Terraform CICD with automatic apply
 
 ## Phase 2 - Core Infrastructure EKS
-- [ ] 04 Remote Backend S3 Bucket
-- [ ] 05 VPC
+- [x] 04 Remote Backend S3 Bucket
+- [x] 05 VPC
 - [ ] 06 Security Group
 - [ ] 07 EKS Cluster Basic
 - [ ] 08 EKS Cluster core Addons
