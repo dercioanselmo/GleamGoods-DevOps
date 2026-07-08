@@ -1,0 +1,63 @@
+name: "TF-04_EKS_Karpenter-Manual-Destroy"
+
+permissions:
+  contents: read
+  issues: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "destroy" to confirm running terraform destroy'
+        required: true
+        default: 'no'
+
+jobs:
+  destroy:
+    name: "Manual Terraform Destroy (04_EKS_Karpenter)"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'destroy' }}
+    environment:
+      name: 04-EKS-Karpenter-Apply
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_REGION: us-east-1
+    defaults:
+      run:
+        working-directory: 04_EKS_Karpenter
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate AWS credentials
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "AWS credentials are missing. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in repo secrets.";
+            exit 1;
+          fi
+          echo "AWS credentials present."
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.12.2
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Destroy (confirmed)
+        run: terraform destroy -auto-approve
+
+      - name: "Notify: create issue about destroy"
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const title = `Terraform destroy executed for 04_EKS_Karpenter by ${context.actor}`;
+            const body = `@dercioanselmo\n\nUser @${context.actor} ran a manual Terraform destroy on 04_EKS_Karpenter on ref ${context.ref}.\n\nRun: ${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            await github.rest.issues.create({ owner, repo, title, body, assignees: ['dercioanselmo'] });
