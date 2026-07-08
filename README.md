@@ -147,10 +147,10 @@ Each microservice includes Helm chart with:
 
 
 ---
-
 # Implementation Roadmap
+
 ## Phase 1 - Project Setup
-- [x] 01 GleamGoods-DevOps project repository 
+- [x] 01 GleamGoods-DevOps project repository
 - [x] 02 Terraform and AWS CLI setup
 - [ ] 03 Terraform CICD with automatic apply
 
@@ -158,58 +158,59 @@ Each microservice includes Helm chart with:
 - [ ] 04 Remote Backend S3 Bucket
 - [ ] 05 VPC
 - [ ] 06 Security Group
-- [ ] 03 EKS Cluster Basic
-- [ ] 04 EKS Cluster core Addons
-- [ ] 05 EKS Cluster Karpenter 
-- [ ] 06 Karpenter K8s manifests (EC2 Nodeclass, nodepool's)
-- [ ] 07 Kubernetes HPA
-- [ ] 08 Open Telemetry
-- [ ] 09 ALB
-- [ ] 10 Secret Manager in the cluster
-- [ ] 11 EBS (persistent volumes)
+- [ ] 07 EKS Cluster Basic
+- [ ] 08 EKS Cluster core Addons
+- [ ] 09 EKS Cluster Karpenter
+- [ ] 10 Karpenter K8s manifests (EC2 Nodeclass, nodepool's)
+- [ ] 11 Kubernetes HPA
+- [ ] 12 Open Telemetry
+- [ ] 13 ALB
+- [ ] 14 Secret Manager in the cluster
+- [ ] 15 EBS (persistent volumes)
 
-## Phase 2 - Database
-- [ ] 12 RDS MySQL
-- [ ] 13 RDS Postgres
-- [ ] 14 DynamoDB
-- [ ] 15 Elastic cache Redis
-- [ ] 16 SQS Queue
+## Phase 3 - Database
+- [ ] 16 RDS MySQL
+- [ ] 17 RDS Postgres
+- [ ] 18 DynamoDB
+- [ ] 19 Elastic cache Redis
+- [ ] 20 SQS Queue
 
-## Phase 3 — Application CI (Plain From Commit to ECR)
-- [ ] 20 Catalog
-- [ ] 15 Cart
-- [ ] 16 Checkout
-- [ ] 17 Orders
-- [ ] 17 UI
-## Phase 3 — Application CI Security SCAN
-- [ ] 17 SAST
-- [ ] 17 SCA
+## Phase 4 — Application CI (Plain From Commit to ECR)
+- [ ] 21 Catalog
+- [ ] 22 Cart
+- [ ] 23 Checkout
+- [ ] 24 Orders
+- [ ] 25 UI
 
-## Phase 3 - Application K8s Manifests and deploy
-### Phase 3.1 - Application K8s Yaml (Deployent, ConfigMaps, Service, Ingress, etc)
-- [ ] 17 UI
-- [ ] 14 Catalog
-- [ ] 15 Cart
-- [ ] 16 Checkout
-- [ ] 17 Orders
+## Phase 5 — Application CI Security SCAN
+- [ ] 26 SAST
+- [ ] 27 SCA
 
-## Phase 3 — Application CD with ArgoCD
-- [ ] 18 Helm chart templating for the 5 services and test
-- [ ] 17 ArgoCD AutoSync Setup with the Helm Chart Manifest
-- [ ] 17 ArgoCD Rollout - Canary
+## Phase 6 - Application K8s Manifests and deploy
 
-## Phase 3 — Open Telemetry K8s Manifests
-- [ ] 17 Adot traces
-- [ ] 14 Adot logs
-- [ ] 15 Open Telemetry Amazon managed Prometheus
-- [ ] 16 Open Telemetry Amazon managed Grafana
-- [ ] 17 Grafana Dashboards
+### Phase 6.1 - Application K8s Yaml (Deployent, ConfigMaps, Service, Ingress, etc)
+- [ ] 28 UI
+- [ ] 29 Catalog
+- [ ] 30 Cart
+- [ ] 31 Checkout
+- [ ] 32 Orders
 
-## Phase 3 — DNS configuraion
-- [ ] 17 Amazon Route 53 domain setup
-- [ ] 17 AWS Certificate Manager (ACM)
-- [ ] 17 https termination 
+## Phase 7 — Application CD with ArgoCD
+- [ ] 33 Helm chart templating for the 5 services and test
+- [ ] 34 ArgoCD AutoSync Setup with the Helm Chart Manifest
+- [ ] 35 ArgoCD Rollout - Canary
 
-## Phase 3 — refactor project for multi-environment
-- [ ] 17 TBD
+## Phase 8 — Open Telemetry K8s Manifests
+- [ ] 36 Adot traces
+- [ ] 37 Adot logs
+- [ ] 38 Open Telemetry Amazon managed Prometheus
+- [ ] 39 Open Telemetry Amazon managed Grafana
+- [ ] 40 Grafana Dashboards
 
+## Phase 9 — DNS configuraion
+- [ ] 41 Amazon Route 53 domain setup
+- [ ] 42 AWS Certificate Manager (ACM)
+- [ ] 43 https termination
+
+## Phase 10 — refactor project for multi-environment
+- [ ] 44 TBD
