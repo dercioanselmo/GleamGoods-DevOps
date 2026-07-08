@@ -80,8 +80,10 @@ resource "aws_nat_gateway" "nat" {
   depends_on = [aws_internet_gateway.igw]
 }
 
-# Resource-7: Public Route Table
+# Resource-7: Public Route Tables (One Per AZ)
 resource "aws_route_table" "public_rt" {
+  for_each = aws_subnet.public
+
   vpc_id = aws_vpc.main.id
 
   route {
@@ -90,16 +92,16 @@ resource "aws_route_table" "public_rt" {
   }
 
   tags = merge(var.tags, {
-    Name = "${var.project_name}-public-rt"
+    Name = "${var.project_name}-public-rt-${each.key}"
   })
 }
 
-# Resource-8: Public Route Table Associations to Pubic Subnet
+# Resource-8: Public Route Table Associations to Public Subnet
 resource "aws_route_table_association" "public_rt_assoc" {
   for_each = aws_subnet.public
 
   subnet_id      = each.value.id
-  route_table_id = aws_route_table.public_rt.id
+  route_table_id = aws_route_table.public_rt[each.key].id
 }
 
 # Resource-9: Private Route Tables (One Per AZ)

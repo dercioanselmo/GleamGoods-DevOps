@@ -153,7 +153,7 @@ Each microservice includes Helm chart with:
 ## Phase 1 - Project Setup
 - [x] 01 GleamGoods-DevOps project repository
 - [x] 02 Terraform and AWS CLI setup
-- [ ] 03 Terraform CICD with automatic apply
+- [x] 03 Terraform CICD with automatic apply
 
 ## Phase 2 - Core Infrastructure EKS
 - [x] 04 Remote Backend S3 Bucket
