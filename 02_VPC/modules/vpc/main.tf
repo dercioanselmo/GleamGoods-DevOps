@@ -5,7 +5,7 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
 
   tags = merge(var.tags, {
-    Name = "${var.environment_name}-vpc"
+    Name = "${var.project_name}-vpc"
   })
 
   lifecycle {
@@ -18,7 +18,7 @@ resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 
   tags = merge(var.tags, {
-    Name = "${var.environment_name}-igw"
+    Name = "${var.project_name}-igw"
   })
 }
 
@@ -35,7 +35,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = merge(var.tags, {
-    Name = "${var.environment_name}-public-${each.key}"
+    Name = "${var.project_name}-public-${each.key}"
   })
 }
 
@@ -51,7 +51,7 @@ resource "aws_subnet" "private" {
   availability_zone = each.key
 
   tags = merge(var.tags, {
-    Name = "${var.environment_name}-private-${each.key}"
+    Name = "${var.project_name}-private-${each.key}"
   })
 }
 
@@ -62,7 +62,7 @@ resource "aws_eip" "nat" {
   domain = "vpc"
 
   tags = merge(var.tags, {
-    Name = "${var.environment_name}-nat-eip-${each.key}"
+    Name = "${var.project_name}-nat-eip-${each.key}"
   })
 }
 
@@ -74,7 +74,7 @@ resource "aws_nat_gateway" "nat" {
   subnet_id     = each.value.id
 
   tags = merge(var.tags, {
-    Name = "${var.environment_name}-nat-${each.key}"
+    Name = "${var.project_name}-nat-${each.key}"
   })
 
   depends_on = [aws_internet_gateway.igw]
@@ -90,7 +90,7 @@ resource "aws_route_table" "public_rt" {
   }
 
   tags = merge(var.tags, {
-    Name = "${var.environment_name}-public-rt"
+    Name = "${var.project_name}-public-rt"
   })
 }
 
@@ -114,7 +114,7 @@ resource "aws_route_table" "private_rt" {
   }
 
   tags = merge(var.tags, {
-    Name = "${var.environment_name}-private-rt-${each.key}"
+    Name = "${var.project_name}-private-rt-${each.key}"
   })
 }
 

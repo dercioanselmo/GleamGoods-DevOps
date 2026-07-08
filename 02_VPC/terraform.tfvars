@@ -1,5 +1,5 @@
 # Environment & Region for Development
-environment_name = "dev"
+project_name = "gleamgoods"
 aws_region       = "us-east-1"
 
 # CIDR for VPC

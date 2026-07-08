@@ -11,8 +11,26 @@ on:
       - "02_VPC/**"
 
 jobs:
+  secret-scan:
+    name: "Trivy Secret Scan (02_VPC)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy secret scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: 02_VPC
+          scanners: secret
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: 1
+
   plan:
+    needs: secret-scan
     name: "Terraform Plan (02_VPC)"
+
     runs-on: ubuntu-latest
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
