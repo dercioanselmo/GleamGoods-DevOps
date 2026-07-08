@@ -25,7 +25,7 @@ terraform {
   # Remote backend configuration using S3 
   backend "s3" {
     bucket         = "tfstate-dev-us-east-1-1v8wcs"         
-    key            = "GleamGoods/eks/gleamgoods/terraform.tfstate"            
+    key            = "GleamGoods/eks/terraform.tfstate"            
     region         = "us-east-1"                            
     encrypt        = true                                   
     use_lockfile   = true     
