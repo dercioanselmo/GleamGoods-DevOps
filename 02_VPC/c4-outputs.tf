@@ -15,6 +15,6 @@ output "public_subnet_ids" {
 
 output "public_subnet_map" {
   value       = module.vpc.public_subnet_map
-  description = "Public subnets for ALB, NLB, etc."
+  description = "Public subnets for ALB, NLB, etc"
 }
 
