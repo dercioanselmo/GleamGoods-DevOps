@@ -1,102 +1,146 @@
+# GleamGoods - E-Commerce DevOps Platform
+<!-- Replace with actual diagram later -->
 
+**Modern, scalable, and fully automated DevOps infrastructure** for a fast-moving e-commerce platform.
 
-GleamGoods
+---
 
-I received a call from a friend interprenwer, opening his e-commerce application for his shops on his town. He put together a team of 5 developers to deliver 5 microservices, including the UI. He gave them the liberty to choose the language and framework of their choice. He just needed it to be delivered fast, his competition was about to launch one similar service.
+## 📖 Context
+
+I received a call from a friend and entrepreneur who was launching an e-commerce application for his shops on his town. 
+He put together a team of 5 developers to deliver 5 microservices, including the UI. He gave them the liberty to choose the language and framework of their choice. He just needed it to be delivered fast, his competition was about to launch one similar service.
+
 He invited me to deliver the infrastructure and deploy his microservices on AWS using managed Kubernetes and any AWS services that I see necessary to deploy and operate the Application.
 He gave the AWS Account and the project Github repository, and asked me to my magic.
 
-I jumped to a call with the developers where each one briefed me about his service. They shared me the source code and I consolidated it into a single Github repository, from where they would continue their commits. 
-Luckily, they were all seniors, and I asked them to run the service on their local machines using Docker, commit the Dockerfile and README.md structured as: 
+I jumped to a call with the developers where each one briefed me about his service. They shared me the source code and I consolidated it into a single Github repository, from where they continued their commits.
+Luckily, they were all senior, and I asked them to run the service on their local machines using Docker, commit the Dockerfile and README.md structured as:
  - Tech Stack
  - Configuration (Environment Variables)
  - API Endpoints
  - How to Run locally
  - How to run with Docker
-
+ 
 I needed to prioritize QA environment so the QA guys could jump ASAP.
 I put together a blue print of what and how the deployment would happens, before start the implementation with Terraform and Kubernetes manifests:
+ 
 
-Deployment Tech Stack:
-AWS Managed Services
-For the cluster
- - VPC 
-   - cross 3 Availability Zones, 
-   - Public and Private subnet segmentation
-   - Internet Gateway + Multi-AZ NAT Gateways
- - Security group, 
- - EKS cluster with multi-AZ worker nodes
-   - AWS Load Balancer Controller
-   - Karpenter dynamic node provisioning
-    - On Demand Ec2 Instances
-    - Spot EC2 Instances
-   - Horizontal Pod Autoscaler (HPA)
-   - ExternalDNS with Amazon Route 53
-   - 
-   - Helm
- - IAM Roles  and Policies, 
- - Load Balancer, 
- - Secret Manager, 
- - EBS, 
- - S3 Bucket, 
- - Amazon Route 53, 
- - Certificate Manager
- - Amazon CloudWatch
- - Amazon Managed Prometheus
- - Amazon Managed Grafana
+---
 
-EKS Addons
-Core:
- - ExternalDNS
- - EKS Pod Identity Agent
- - EBS CSI Driver
- - Cert Manager
-Observability:
- - Kube State Metrics
- - Metric Server
- - Prometheus Node Explorer
- - Grafana
+## Deployment Tech Stack
 
- ArgoCD
-  - Install and configure ready for when the Helm Charts are ready to go 
+### AWS Managed Services (Core Infrastructure)
 
-For the Application Microservices:
-UI - A Java service providing the frontend for the GleamGoods, serving the HTML UI and aggregating calls to the backend API components.
-Orders - Java service providing an API for storing orders with persistence using PostgreSQL.
- - RDS postgres
- - SQS
-Checkout - A Node.js API for storing customer data during the checkout process using Redis.
- - ElasticCache Redis
-Catalog - Implemented with Go and data persisted with MySQL, provides an API for retrieving product catalog information
- - RDS MySQL
-Cart - A service implemented using Java and data persisted using DynamoDB, is the API for storing customer shopping carts.
- - DynamoDB
+- **VPC**  
+  - Spans 3 Availability Zones  
+  - Public + Private subnet segmentation  
+  - Internet Gateway + Multi-AZ NAT Gateways  
 
-Application CICD
-CI
-GitHub
-GitHub Action
- - SAST and SCA
-    - SonarCloud, 
-    - Dependency Scan 
-    - Image Scan
-    - CVE Scan
-ECR
+- **Security Groups** & **IAM Roles/Policies** (least privilege)
 
-CD 
- With ArgoCD - Argo Rollout, Canary strategy
+- **Amazon EKS**
+  - Multi-AZ worker nodes  
+  - **AWS Load Balancer Controller**  
+  - **Karpenter** for dynamic node provisioning  
+    - On-Demand EC2 Instances  
+    - Spot EC2 Instances 
+  - **Horizontal Pod Autoscaler (HPA)**  
+  - **ExternalDNS** + Amazon Route 53  
+  - **Helm** for package management  
 
-Terraform CICD with Github and GitHub Action
-- IaC vulnerability scan (Trivy or TBD)
-- Terraform Apply manual Approval
-- Terraform delete manual Approval
+- **Supporting AWS Services**:
+  - Application Load Balancer (ALB)
+  - AWS Secrets Manager
+  - Amazon EBS (persistent volumes)
+  - S3 Buckets
+  - Amazon Route 53
+  - AWS Certificate Manager (ACM)
+  - Amazon CloudWatch
+  - Amazon Managed Service for Prometheus
+  - Amazon Managed Grafana
 
-Application Helm Charts Manifest for each service
- - Define the Kubernetes artifacts necessary to run the application.
-   - deployment, with all the details like replicas, necessary resources CPU and Memory, and define it's limits
-   - ConfigMaps and Secrets (Still just for my local test)
-   - Service, etc
-   - Apply and test the Application with port-forward
- - 
+---
 
- Load generator
+## 🔧 EKS Add-ons
+
+### Core Add-ons
+- ExternalDNS
+- EKS Pod Identity Agent
+- EBS CSI Driver
+- Cert Manager
+
+### Observability Add-ons
+- Kube State Metrics
+- Metrics Server
+- Prometheus Node Exporter
+
+### GitOps
+- **Argo CD** – Installed and configured early to support Helm Charts and GitOps workflows
+
+---
+
+## 🧩 Application Microservices
+
+| Service     | Language   | Persistence          | AWS Service          | Description |
+|-------------|------------|----------------------|----------------------|-----------|
+| **UI**      | Java       | -                    | -                    | Frontend serving HTML UI + API aggregation |
+| **Orders**  | Java       | PostgreSQL           | **RDS Postgres** + SQS | Order management & persistence |
+| **Checkout**| Node.js    | Redis                | **ElastiCache Redis**| Checkout process state |
+| **Catalog** | Go         | MySQL                | **RDS MySQL**        | Product catalog API |
+| **Cart**    | Java       | DynamoDB             | **DynamoDB**         | Shopping cart management |
+
+---
+
+## 🔄 CI/CD Pipelines
+
+### Application CI/CD
+
+**CI (GitHub Actions)**
+- SAST & SCA:
+  - Static Code Analisys
+  - Secret Scanner
+  - Software Composition Analysis (SCA)
+  - Static Application Security Testing (SAST)
+  - Software Bill of Materials (BOM) 
+
+- Builds and pushes images to **Amazon ECR**
+  - DAST with OWASP ZAP
+  - Image Scanners (On ECR)
+
+**CD (GitOps)**
+- **Argo CD** + **Argo Rollouts**
+- Canary deployment strategy
+
+### Infrastructure as Code (Terraform) CI/CD
+
+- IaC vulnerability scanning (Trivy or equivalent)
+- `terraform plan` on every PR
+- Manual approval gate for `terraform apply`
+- Manual approval gate for `terraform destroy`
+
+---
+
+## 📦 Application Helm Charts
+
+Each microservice includes Helm chart with:
+
+- **Deployment** (replicas, resource requests & limits, liveness/readiness probes)
+- **ConfigMaps** & **Secrets**
+- **Service** (ClusterIP / LoadBalancer)
+- **HorizontalPodAutoscaler**
+- **Ingress** (via ALB)
+- Environment-specific values files
+
+**Local Testing**: `helm install` + `kubectl port-forward`
+
+---
+
+## 📈 Load Testing & Validation
+
+- Load generator tools integrated for performance and stress testing
+- Monitoring dashboards in Amazon Managed Grafana
+- Full observability stack (metrics, logs, traces)
+
+---
+
+## Implementation Roadmap
