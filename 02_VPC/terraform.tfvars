@@ -8,10 +8,6 @@ vpc_cidr = "10.0.0.0/16"
 # Subnet mask (/24 subnets)
 subnet_newbits = 8
 
-# Fake secret to test Trivy secret scanning - DO NOT COMMIT REAL SECRETS
-AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7TESTKEY"
-aws_secret_access_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYTESTKEY12"
-
 # Tags for Dev Environment
 tags = {
   Terraform   = "true"
