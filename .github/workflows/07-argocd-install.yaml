@@ -1,0 +1,92 @@
+name: "07_ArgoCD_Install"
+
+permissions:
+  contents: read
+  issues: write
+
+on:
+  workflow_run:
+    workflows:
+      - "TF-03_EKS_with_addons"
+    types:
+      - completed
+  push:
+    branches:
+      - main
+    paths:
+      - "07_ArgoCD_Install/**"
+
+jobs:
+  install-argocd:
+    name: "Install ArgoCD on EKS"
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_REGION: us-east-1
+      EKS_CLUSTER_NAME: retail-gleamgoods-eks
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER_NAME
+
+      - name: Run ArgoCD install script
+        run: |
+          chmod +x 07_ArgoCD_Install/install-argocd.sh
+          bash 07_ArgoCD_Install/install-argocd.sh
+
+      - name: Store ArgoCD admin password in Secrets Manager
+        run: |
+          PASSWORD=$(kubectl -n argocd get secret argocd-initial-admin-secret \
+            -o jsonpath="{.data.password}" | base64 --decode)
+          echo "::add-mask::$PASSWORD"
+          aws secretsmanager put-secret-value \
+            --secret-id "gleamgoods/argocd/admin-password" \
+            --secret-string "$PASSWORD" \
+            --region $AWS_REGION 2>/dev/null || \
+          aws secretsmanager create-secret \
+            --name "gleamgoods/argocd/admin-password" \
+            --description "ArgoCD initial admin password" \
+            --secret-string "$PASSWORD" \
+            --region $AWS_REGION
+
+      - name: Notify install complete
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            await github.rest.issues.create({
+              owner, repo,
+              title: `✅ ArgoCD installed on retail-gleamgoods-eks`,
+              body: `@dercioanselmo\n\nArgoCD has been successfully installed on \`retail-gleamgoods-eks\`.\n\nAdmin password stored in AWS Secrets Manager at \`gleamgoods/argocd/admin-password\`.\n\nRun: ${runUrl}`,
+              assignees: ['dercioanselmo'],
+              labels: ['deployment']
+            });
+
+      - name: Notify install failed
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            await github.rest.issues.create({
+              owner, repo,
+              title: `❌ ArgoCD install failed on retail-gleamgoods-eks`,
+              body: `@dercioanselmo\n\nArgoCD installation failed on \`retail-gleamgoods-eks\`.\n\nRun: ${runUrl}`,
+              assignees: ['dercioanselmo'],
+              labels: ['deployment']
+            });
