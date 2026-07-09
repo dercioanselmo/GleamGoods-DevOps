@@ -1,0 +1,153 @@
+name: "TF-05_OpenTelemetry"
+
+permissions:
+  contents: read
+  issues: write
+
+on:
+  workflow_run:
+    workflows:
+      - "TF-04_EKS_Karpenter"
+    types:
+      - completed
+  push:
+    branches:
+      - main
+    paths:
+      - "05_OpenTelemetry/**"
+
+jobs:
+  secret-scan:
+    name: "Trivy Secret Scan (05_OpenTelemetry)"
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy secret scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: 05_OpenTelemetry
+          scanners: secret
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: 1
+
+      - name: Notify secrets found
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            await github.rest.issues.create({
+              owner, repo,
+              title: `🚨 Secret detected in 05_OpenTelemetry by @${context.actor}`,
+              body: `@dercioanselmo\n\nTrivy detected exposed secrets in \`05_OpenTelemetry\` on commit ${context.sha} pushed by @${context.actor}.\n\n**Action required: rotate any exposed credentials immediately.**\n\nRun: ${runUrl}`,
+              assignees: ['dercioanselmo'],
+              labels: ['security']
+            });
+
+  plan:
+    needs: secret-scan
+    name: "Terraform Plan (05_OpenTelemetry)"
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_REGION: us-east-1
+    defaults:
+      run:
+        working-directory: 05_OpenTelemetry
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.12.2
+          terraform_wrapper: false
+
+      - name: Check Terraform version
+        run: terraform version
+
+      - name: Validate AWS credentials
+        run: |
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "AWS credentials are missing. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in repo secrets.";
+            exit 1;
+          fi
+          echo "AWS credentials appear present."
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -out=plan.tfplan -no-color
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-05-opentelemetry
+          path: 05_OpenTelemetry/plan.tfplan
+
+  apply:
+    name: "Terraform Apply (05_OpenTelemetry)"
+    needs: plan
+    runs-on: ubuntu-latest
+    environment:
+      name: 05-OpenTelemetry-Apply
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_REGION: us-east-1
+    defaults:
+      run:
+        working-directory: 05_OpenTelemetry
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-05-opentelemetry
+          path: .
+
+      - name: Locate and move plan file
+        run: |
+          set -e
+          echo "Searching for plan.tfplan under $GITHUB_WORKSPACE"
+          PLAN_PATH=$(find "$GITHUB_WORKSPACE" -type f -name 'plan.tfplan' | head -n 1 || true)
+          if [ -z "$PLAN_PATH" ]; then
+            echo "No plan.tfplan found. Listing workspace for debugging:";
+            ls -al "$GITHUB_WORKSPACE" || true;
+            ls -al . || true;
+            exit 1;
+          fi
+          echo "Found plan at: $PLAN_PATH"
+          mv "$PLAN_PATH" ./plan.tfplan
+          echo "Moved plan to $(pwd)/plan.tfplan"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 1.12.2
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve plan.tfplan
