@@ -161,12 +161,15 @@ Each microservice includes Helm chart with:
 - [x] 06 EKS Cluster Basic
 - [x] 07 EKS Cluster core Addons
 - [x] 08 EKS Cluster Karpenter
-- [ ] 19 Karpenter K8s manifests (EC2 Nodeclass, nodepool's)
-- [ ] 10 Kubernetes HPA
-- [x] 11 Open Telemetry
-- [x] 12 ECR
-- [ ] 13 Secret Manager in the cluster [With Rotation]
-- [ ] 14 EBS (persistent volumes)
+- [x] 09 Open Telemetry
+- [x] 10 ECR
+- [x] 11 ArgoCD Install
+- [ ] 12 Karpenter K8s manifests (EC2 Nodeclass, nodepool's)
+- [ ] 13 Kubernetes HPA
+- [ ] 14 Secret Manager in the cluster [With Rotation]
+
+
+karpenter-node-role
 
 ## Phase 3 - Database
 - [ ] 15 RDS MySQL

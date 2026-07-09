@@ -7,21 +7,21 @@ spec:
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: al2023@latest
-  # Node IAM role created in Terraform
-  role: "arn:aws:iam::652978908369:role/retail-dev-karpenter-node-role"
+  # Node IAM role created in Terraform Karpenter project
+  role: "arn:aws:iam::564956047797:role/retail-gleamgoods-karpenter-node-role"
   # Auto-discover subnets (the cluster tags)
   subnetSelectorTerms:
     - tags:
         # Make sure the worker nodes are private subnet
-        kubernetes.io/cluster/retail-dev-eks: owned
+        kubernetes.io/cluster/retail-gleamgoods-eks: owned
         kubernetes.io/role/internal-elb: "1"
   # Auto-discover security groups
   securityGroupSelectorTerms:
     - tags:
-        kubernetes.io/cluster/retail-dev-eks: owned
+        kubernetes.io/cluster/retail-gleamgoods-eks: owned
   # Required for Karpenter auto-discovery of resources
   tags:
-    karpenter.sh/discovery: retail-dev-eks
+    karpenter.sh/discovery: retail-gleamgoods-eks
   # Recommended EBS configuration
   blockDeviceMappings:
     - deviceName: /dev/xvda
