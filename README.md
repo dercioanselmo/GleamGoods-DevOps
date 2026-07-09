@@ -155,7 +155,7 @@ Each microservice includes Helm chart with:
 - [x] 02 Terraform and AWS CLI setup
 - [x] 03 Terraform CICD with automatic apply
 
-## Phase 2 - Core Infrastructure EKS
+## Phase 2 - Core Infrastructure EKS Terraform
 - [x] 04 Remote Backend S3 Bucket
 - [x] 05 VPC
 - [x] 06 EKS Cluster Basic
@@ -168,15 +168,12 @@ Each microservice includes Helm chart with:
 - [x] 13 Kubernetes Metrics Server for HPA (Added as EKS Cluster add-ons terraform project)
 - [x] 14 Secret Manager in the cluster [With Rotation]
 
-
-karpenter-node-role
-
 ## Phase 3 - Database
-- [ ] 15 RDS MySQL
-- [ ] 16 RDS Postgres
-- [ ] 17 DynamoDB
-- [ ] 18 Elastic cache Redis
-- [ ] 19 SQS Queue
+- [x] 15 RDS MySQL
+- [x] 16 RDS Postgres
+- [x] 17 DynamoDB
+- [x] 18 Elastic cache Redis
+- [x] 19 SQS Queue
 
 ## Phase 4 — Application CI (Plain From Commit to ECR)
 - [ ] 20 Catalog
