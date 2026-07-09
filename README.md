@@ -164,7 +164,7 @@ Each microservice includes Helm chart with:
 - [ ] 19 Karpenter K8s manifests (EC2 Nodeclass, nodepool's)
 - [ ] 10 Kubernetes HPA
 - [x] 11 Open Telemetry
-- [ ] 12 ALB
+- [x] 12 ECR
 - [ ] 13 Secret Manager in the cluster [With Rotation]
 - [ ] 14 EBS (persistent volumes)
 
