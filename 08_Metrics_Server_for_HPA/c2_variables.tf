@@ -12,10 +12,10 @@ variable "aws_region" {
 # --------------------------------------------------------
 
 # Logical environment name (used in tags and resource names)
-variable "environment_name" {
-  description = "Environment name used in resource names and tags"
+variable "project_name" {
+  description = "Project name used in resource names and tags"
   type        = string
-  default     = "dev"
+  default     = "gleamgoods"
 }
 
 # Business unit or department (used in tags and naming)
