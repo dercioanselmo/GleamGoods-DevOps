@@ -165,7 +165,7 @@ Each microservice includes Helm chart with:
 - [x] 10 ECR
 - [x] 11 ArgoCD Install
 - [x] 12 Karpenter K8s manifests (EC2 Nodeclass, nodepool's)
-- [ ] 13 Kubernetes Metrics Server for HPA
+- [x] 13 Kubernetes Metrics Server for HPA (Added as EKS Cluster add-ons terraform project)
 - [ ] 14 Secret Manager in the cluster [With Rotation]
 
 
