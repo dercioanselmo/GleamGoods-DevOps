@@ -148,7 +148,7 @@ Each microservice includes Helm chart with:
 
 ---
 
-# Implementation Roadmap
+# Implementation Progress
 
 ## Phase 1 - Project Setup
 - [x] 01 GleamGoods-DevOps project repository
@@ -160,12 +160,12 @@ Each microservice includes Helm chart with:
 - [x] 05 VPC
 - [x] 06 EKS Cluster Basic
 - [x] 07 EKS Cluster core Addons
-- [ ] 08 EKS Cluster Karpenter
+- [x] 08 EKS Cluster Karpenter
 - [ ] 19 Karpenter K8s manifests (EC2 Nodeclass, nodepool's)
 - [ ] 10 Kubernetes HPA
-- [ ] 11 Open Telemetry
+- [x] 11 Open Telemetry
 - [ ] 12 ALB
-- [ ] 13 Secret Manager in the cluster
+- [ ] 13 Secret Manager in the cluster [With Rotation]
 - [ ] 14 EBS (persistent volumes)
 
 ## Phase 3 - Database

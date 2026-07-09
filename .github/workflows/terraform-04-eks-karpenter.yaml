@@ -5,6 +5,11 @@ permissions:
   issues: write
 
 on:
+  workflow_run:
+    workflows:
+      - "TF-03_EKS_with_addons"
+    types:
+      - completed
   push:
     branches:
       - main
@@ -15,6 +20,9 @@ jobs:
   secret-scan:
     name: "Trivy Secret Scan (04_EKS_Karpenter)"
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
