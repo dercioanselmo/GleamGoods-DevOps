@@ -1,6 +1,6 @@
 # Use existing AWS Secrets Manager Secret (already created manually)
 data "aws_secretsmanager_secret" "retailstore_secret" {
-  name = "retailstore-db-secret-1"
+  name = var.db_secret_name
 }
 
 data "aws_secretsmanager_secret_version" "retailstore_secret_value" {

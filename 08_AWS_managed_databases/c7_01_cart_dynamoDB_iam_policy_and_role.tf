@@ -38,7 +38,7 @@ resource "aws_iam_role" "cart_dynamodb_role" {
 
   tags = {
     Name        = "${local.name}-cart-dynamodb-role"
-    Environment = var.environment_name
+    Environment = var.project_name
     Component   = "Cart"
   }
 }

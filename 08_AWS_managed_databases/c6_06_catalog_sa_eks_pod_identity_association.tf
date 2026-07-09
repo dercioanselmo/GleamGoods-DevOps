@@ -8,7 +8,7 @@
 #
 # Purpose:
 # - The IAM Role (aws_iam_role.retailstore_csi_role) grants permission to 
-#   read the `retailstore-db-secret-1` from AWS Secrets Manager.
+#   read the `gleamgood-db-secret` from AWS Secrets Manager.
 # - The Secrets Store CSI Driver uses this association to fetch the credentials 
 #   securely and mount them into the Catalog Pod at runtime.
 # - These credentials will later be used by the Catalog app to connect to 

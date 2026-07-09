@@ -9,7 +9,7 @@ resource "aws_sqs_queue" "orders_sqs_queue" {
   tags = {
     Name        = "${local.name}-orders-queue"
     Component   = "Orders"
-    Environment = var.environment_name
+    Environment = var.project_name
   }
 }
 

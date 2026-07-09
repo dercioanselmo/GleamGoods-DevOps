@@ -1,4 +1,4 @@
-# IAM Policy: Allow access to all retailstore-db-secrets
+# IAM Policy: Allow access to all glemgoods-db-secrets
 resource "aws_iam_policy" "retailstore_db_secret_policy" {
   name        = "${local.name}-retailstore-db-secret-policy"
   description = "Allows access to retailstore-db-secret* in AWS Secrets Manager"
@@ -13,7 +13,7 @@ resource "aws_iam_policy" "retailstore_db_secret_policy" {
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret"
         ]
-        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:gleamgoods-db-secret*"
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.db_secret_name}*"
       }
     ]
   })

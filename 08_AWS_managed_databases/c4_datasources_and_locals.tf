@@ -13,8 +13,8 @@ locals {
   owners = var.business_division  # Example: "retail"
 
   # Environment name such as dev, staging, prod (from variable)
-  environment = var.environment_name  # Example: "dev"
+  environment = var.project_name  # Example: "gleamgoods"
 
-  # Standardized naming prefix: "<division>-<env>"
-  name = "${local.owners}-${local.environment}"  # Example: "retail-dev"
+  # Standardized naming prefix: "<division>-<project>"
+  name = "${local.owners}-${local.environment}"  # Example: "retail-gleamgoods"
 }

@@ -5,7 +5,7 @@ resource "aws_iam_role" "orders_postgresql_getsecrets" {
 
   tags = {
     Name        = "${local.name}-orders-postgresql-getsecrets-role"
-    Environment = var.environment_name
+    Environment = var.project_name
     Component   = "AWS Secrets Store CSI Driver ASCP"
   }
 }

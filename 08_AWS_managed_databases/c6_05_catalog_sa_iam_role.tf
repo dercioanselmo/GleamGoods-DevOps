@@ -5,7 +5,7 @@ resource "aws_iam_role" "catalog_getsecrets" {
 
   tags = {
     Name        = "${local.name}-catalog-getsecrets-role"
-    Environment = var.environment_name
+    Environment = var.project_name
     Component   = "AWS Secrets Store CSI Driver ASCP"
   }
 }

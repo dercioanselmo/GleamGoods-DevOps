@@ -38,7 +38,7 @@ resource "aws_dynamodb_table" "items_west2" {
 
   tags = {
     Name        = "Items"
-    Environment = var.environment_name
+    Environment = var.project_name
     Component   = "Cart"
   }
 }
