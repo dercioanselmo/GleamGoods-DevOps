@@ -176,24 +176,25 @@ Each microservice includes Helm chart with:
 - [x] 19 SQS Queue
 
 ## Phase 4 — Application CI (Plain From Commit to ECR)
-- [ ] 20 Catalog
-- [ ] 21 Cart
-- [ ] 22 Checkout
-- [ ] 23 Orders
-- [ ] 24 UI
+- [x] 20 Catalog
+- [x] 21 Cart
+- [x] 22 Checkout
+- [x] 23 Orders
+- [x] 24 UI
 
 ## Phase 5 — Application CI Security SCAN
 - [ ] 25 SAST
 - [ ] 26 SCA
 
 ## Phase 6 - Application K8s Manifests and deploy
-
+- [ ] 27 Secrets Prover Class (Will allow the apps to use AWS Secrets)
 ### Phase 6.1 - Application K8s Yaml (Deployent, ConfigMaps, Service, Ingress, etc)
 - [ ] 27 UI
 - [ ] 28 Catalog
 - [ ] 29 Cart
 - [ ] 30 Checkout
 - [ ] 31 Orders
+- [ ] 31 Check and test if the same can be done for the other config K8s Yaml files.
 
 ## Phase 7 — Application CD with ArgoCD
 - [ ] 32 Helm chart templating for the 5 services and test

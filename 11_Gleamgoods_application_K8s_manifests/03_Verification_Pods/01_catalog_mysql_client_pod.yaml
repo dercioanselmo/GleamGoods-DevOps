@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: catalog-mysql-client
+  namespace: default
+spec:
+  # Use the same ServiceAccount that has Pod Identity access
+  serviceAccountName: catalog
+  containers:
+  - name: mysql-client
+    image: mysql:8.0
+    command: ["/bin/sh"]
+    args: ["-c", "sleep infinity"]
+
+    env:
+      # Fetch MySQL credentials from synced Secret
+      - name: MYSQL_USER
+        valueFrom:
+          secretKeyRef:
+            name: catalog-db
+            key: RETAIL_CATALOG_PERSISTENCE_USER
+
+      - name: MYSQL_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: catalog-db
+            key: RETAIL_CATALOG_PERSISTENCE_PASSWORD
+
+      # Optional: directly use the endpoint and db name from ConfigMap if available
+      - name: MYSQL_HOST
+        valueFrom:
+          configMapKeyRef:
+            name: catalog
+            key: RETAIL_CATALOG_PERSISTENCE_ENDPOINT
+
+      - name: MYSQL_DB
+        valueFrom:
+          configMapKeyRef:
+            name: catalog
+            key: RETAIL_CATALOG_PERSISTENCE_DB_NAME
+
+  restartPolicy: Never

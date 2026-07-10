@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: orders-sqs-client
+  namespace: default
+spec:
+  serviceAccountName: orders
+  containers:
+  - name: aws-cli
+    image: amazon/aws-cli
+    command: ["/bin/sh"]
+    args: ["-c", "sleep infinity"]
+
+    env:
+      - name: AWS_REGION
+        value: us-east-1
+
+      # Fetch queue name from ConfigMap
+      - name: SQS_QUEUE_NAME
+        valueFrom:
+          configMapKeyRef:
+            name: orders
+            key: RETAIL_ORDERS_MESSAGING_SQS_TOPIC
+  restartPolicy: Never
