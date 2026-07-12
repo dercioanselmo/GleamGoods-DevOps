@@ -8,7 +8,7 @@
 # we are creating this DynamoDB table specifically in the
 # "us-west-2" region using an aliased AWS provider (aws.west2).
 # File: DynamoDBConfiguration.java
-# GitHub Link: https://github.com/aws-containers/retail-store-sample-app/blob/v1.3.0/src/cart/src/main/java/com/amazon/sample/carts/config/DynamoDBConfiguration.java
+# GitHub Link: https://github.com/aws-containers/gleamgoods-app/blob/v1.3.0/src/cart/src/main/java/com/amazon/sample/carts/config/DynamoDBConfiguration.java
 # CodeLine: builder.region(Region.US_WEST_2);
 # ---------------------------------------------------------------
 

@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: checkout
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/dercioanselmo/GleamGoods-DevOps.git
+    targetRevision: main
+    path: 11_Gleamgoods_application_K8s_manifests/01_microservices/03_checkout/02_helm_chart
+    helm:
+      valueFiles:
+        - values-checkout.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true    # Auto-delete resources not in Git
+      selfHeal: true # Auto-sync if drift detected
+    syncOptions:
+      - CreateNamespace=true

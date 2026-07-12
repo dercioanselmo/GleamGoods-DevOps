@@ -215,3 +215,14 @@ Each microservice includes Helm chart with:
 
 ## Phase 10 — refactor project for multi-environment
 - [ ] 44 TBD
+
+
+### Notes
+### ArgoCD Installation and config:
+ 1. Run the script 07/ArgoCD_Install/install-argocd.sh
+ 2. Add GithHub tocket to ArgoCD
+ 
+argocd repo add https://github.com/dercioanselmo/GleamGoods-DevOps.git \
+  --username dercioanselmo \
+  --password ghp_******_p \ (Get this from GitHub settings --> Developer Tools --> Access tocken)
+  --name GleamGoods-DevOps
