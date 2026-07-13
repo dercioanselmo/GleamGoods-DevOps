@@ -11,6 +11,6 @@ subnet_newbits = 8
 # Tags for Dev Environment
 tags = {
   Terraform   = "true"
-  Project     = "retail-store"
+  Project     = "GleamGoods"
   Owner       = "Dercio Anselmo"
 }
