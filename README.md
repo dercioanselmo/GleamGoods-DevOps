@@ -28,6 +28,8 @@ I put together a blue print of what and how the deployment would happens, before
 ---
 
 ## Deployment Tech Stack
+The current project/repository is the AWS, Terraform, Kubernetes deployment.
+The source code, and helm charts can be accessed at https://github.com/dercioanselmo/GleamGoods
 
 ### AWS Managed Services (Core Infrastructure)
 
@@ -182,40 +184,38 @@ Each microservice includes Helm chart with:
 - [x] 23 Orders
 - [x] 24 UI
 
-## Phase 5 — Application CI Security SCAN
-- [ ] 25 SAST
-- [ ] 26 SCA
-
 ## Phase 6 - Application K8s Manifests and deploy
-- [ ] 27 Secrets Prover Class (Will allow the apps to use AWS Secrets)
+- [x] 25 Secrets Prover Class (Will allow the apps to use AWS Secrets)
 ### Phase 6.1 - Application K8s Yaml (Deployent, ConfigMaps, Service, Ingress, etc)
-- [ ] 27 UI
-- [ ] 28 Catalog
-- [ ] 29 Cart
-- [ ] 30 Checkout
-- [ ] 31 Orders
-- [ ] 31 Check and test if the same can be done for the other config K8s Yaml files.
+- [x] 26 UI
+- [x] 27 Catalog
+- [x] 28 Cart
+- [x] 29 Checkout
+- [x] 30 Orders
 
 ## Phase 7 — Application CD with ArgoCD
-- [ ] 32 Helm chart templating for the 5 services and test
-- [ ] 33 ArgoCD AutoSync Setup with the Helm Chart Manifest
-- [ ] 34 ArgoCD Rollout - Canary
-
-## Phase 8 — Open Telemetry K8s Manifests
-- [ ] 35 Adot traces
-- [ ] 36 Adot logs
-- [ ] 37 Open Telemetry Amazon managed Prometheus
-- [ ] 38 Open Telemetry Amazon managed Grafana
-- [ ] 39 Grafana Dashboards
+- [x] 31 Helm chart templating for the 5 services and test
+- [x] 32 ArgoCD AutoSync Setup with the Helm Chart Manifest
+- [ ] 33 ArgoCD Rollout - Canary
 
 ## Phase 9 — DNS configuraion
-- [ ] 40 Amazon Route 53 domain setup
-- [ ] 41 AWS Certificate Manager (ACM)
-- [ ] 42 https termination
+- [x] 34 Amazon Route 53 domain setup
+- [x] 35 AWS Certificate Manager (ACM)
+- [x] 36 https termination
+
+## Phase 5 — Application CI Security SCAN
+- [ ] 37 SAST
+- [ ] 38 SCA
+
+## Phase 8 — Open Telemetry K8s Manifests
+- [ ] 39 Adot traces
+- [ ] 40 Adot logs
+- [ ] 41 Open Telemetry Amazon managed Prometheus
+- [ ] 42 Open Telemetry Amazon managed Grafana
+- [ ] 43 Grafana Dashboards
 
 ## Phase 10 — refactor project for multi-environment
 - [ ] 44 TBD
-
 
 ### Notes
 ### ArgoCD Installation and config:
