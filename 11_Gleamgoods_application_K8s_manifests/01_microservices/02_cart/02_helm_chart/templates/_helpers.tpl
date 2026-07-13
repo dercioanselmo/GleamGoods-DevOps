@@ -50,7 +50,7 @@ Selector labels
 app.kubernetes.io/name: {{ include "carts.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: service
-app.kubernetes.io/owner: glramgoods
+app.kubernetes.io/owner: gleamgoods
 {{- end }}
 
 {{/*
@@ -108,5 +108,5 @@ Selector labels for dynamodb
 app.kubernetes.io/name: {{ include "carts.fullname" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/component: dynamodb
-app.kubernetes.io/owner: glramgoods
+app.kubernetes.io/owner: gleamgoods
 {{- end }}

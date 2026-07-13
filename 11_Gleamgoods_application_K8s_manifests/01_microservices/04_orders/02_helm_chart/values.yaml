@@ -5,7 +5,7 @@
 replicaCount: 1
 
 image:
-  repository: public.ecr.aws/aws-containers/glramgoods-orders
+  repository: public.ecr.aws/aws-containers/gleamgoods-orders
   pullPolicy: IfNotPresent
   tag: 
 

@@ -7,7 +7,7 @@ spec:
   hosts:
   - "*"
   gateways:
-  - glramgoods
+  - gleamgoods
   http:
   - match:
     - uri:

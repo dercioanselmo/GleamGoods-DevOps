@@ -5,7 +5,7 @@
 replicaCount: 1
 
 image:
-  repository: public.ecr.aws/aws-containers/glramgoods-ui
+  repository: public.ecr.aws/aws-containers/gleamgoods-ui
   pullPolicy: IfNotPresent
   tag: 
 
