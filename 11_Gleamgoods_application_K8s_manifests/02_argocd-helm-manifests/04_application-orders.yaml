@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/dercioanselmo/GleamGoods-DevOps.git
+    repoURL: https://github.com/dercioanselmo/GleamGoods.git
     targetRevision: main
-    path: 11_Gleamgoods_application_K8s_manifests/01_microservices/04_orders/02_helm_chart
+    path: src/orders/chart
     helm:
       valueFiles:
         - values-orders.yaml
