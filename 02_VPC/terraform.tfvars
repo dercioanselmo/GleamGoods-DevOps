@@ -1,4 +1,4 @@
-# Environment & Region for Development
+# Project & Region 
 project_name = "gleamgoods"
 aws_region       = "us-east-1"
 

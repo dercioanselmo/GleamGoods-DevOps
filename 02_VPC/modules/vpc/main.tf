@@ -1,4 +1,10 @@
+locals {
+  cluster_name = "retail-gleamgoods-eks"
+}
+
+# -----------------------------------------------------------------------------
 # Resource-1: VPC
+# -----------------------------------------------------------------------------
 resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
@@ -13,7 +19,9 @@ resource "aws_vpc" "main" {
   }
 }
 
+# -----------------------------------------------------------------------------
 # Resource-2: Internet Gateway
+# -----------------------------------------------------------------------------
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 
@@ -22,7 +30,9 @@ resource "aws_internet_gateway" "igw" {
   })
 }
 
+# -----------------------------------------------------------------------------
 # Resource-3: Public Subnets
+# -----------------------------------------------------------------------------
 resource "aws_subnet" "public" {
   for_each = {
     for idx, az in local.azs :
@@ -36,10 +46,19 @@ resource "aws_subnet" "public" {
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-public-${each.key}"
+
+    # Kubernetes
+    "kubernetes.io/cluster/${local.cluster_name}" = "owned"
+    "kubernetes.io/role/elb"                      = "1"
+
+    # Karpenter
+    "karpenter.sh/discovery"                      = local.cluster_name
   })
 }
 
+# -----------------------------------------------------------------------------
 # Resource-4: Private Subnets
+# -----------------------------------------------------------------------------
 resource "aws_subnet" "private" {
   for_each = {
     for idx, az in local.azs :
@@ -52,10 +71,19 @@ resource "aws_subnet" "private" {
 
   tags = merge(var.tags, {
     Name = "${var.project_name}-private-${each.key}"
+
+    # Kubernetes
+    "kubernetes.io/cluster/${local.cluster_name}" = "owned"
+    "kubernetes.io/role/internal-elb"             = "1"
+
+    # Karpenter
+    "karpenter.sh/discovery"                      = local.cluster_name
   })
 }
 
-# Resource-5: Elastic IPs for NAT Gateways
+# -----------------------------------------------------------------------------
+# Resource-5: Elastic IPs
+# -----------------------------------------------------------------------------
 resource "aws_eip" "nat" {
   for_each = aws_subnet.public
 
@@ -66,7 +94,9 @@ resource "aws_eip" "nat" {
   })
 }
 
-# Resource-6: NAT Gateways (One Per AZ)
+# -----------------------------------------------------------------------------
+# Resource-6: NAT Gateways
+# -----------------------------------------------------------------------------
 resource "aws_nat_gateway" "nat" {
   for_each = aws_subnet.public
 
@@ -80,7 +110,9 @@ resource "aws_nat_gateway" "nat" {
   depends_on = [aws_internet_gateway.igw]
 }
 
-# Resource-7: Public Route Tables (One Per AZ)
+# -----------------------------------------------------------------------------
+# Resource-7: Public Route Tables
+# -----------------------------------------------------------------------------
 resource "aws_route_table" "public_rt" {
   for_each = aws_subnet.public
 
@@ -96,7 +128,9 @@ resource "aws_route_table" "public_rt" {
   })
 }
 
-# Resource-8: Public Route Table Associations to Public Subnet
+# -----------------------------------------------------------------------------
+# Resource-8: Public Route Table Associations
+# -----------------------------------------------------------------------------
 resource "aws_route_table_association" "public_rt_assoc" {
   for_each = aws_subnet.public
 
@@ -104,7 +138,9 @@ resource "aws_route_table_association" "public_rt_assoc" {
   route_table_id = aws_route_table.public_rt[each.key].id
 }
 
-# Resource-9: Private Route Tables (One Per AZ)
+# -----------------------------------------------------------------------------
+# Resource-9: Private Route Tables
+# -----------------------------------------------------------------------------
 resource "aws_route_table" "private_rt" {
   for_each = aws_subnet.private
 
@@ -120,11 +156,12 @@ resource "aws_route_table" "private_rt" {
   })
 }
 
+# -----------------------------------------------------------------------------
 # Resource-10: Private Route Table Associations
+# -----------------------------------------------------------------------------
 resource "aws_route_table_association" "private_rt_assoc" {
   for_each = aws_subnet.private
 
   subnet_id      = each.value.id
   route_table_id = aws_route_table.private_rt[each.key].id
 }
-

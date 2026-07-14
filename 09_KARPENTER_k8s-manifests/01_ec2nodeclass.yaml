@@ -7,21 +7,24 @@ spec:
   amiFamily: AL2023
   amiSelectorTerms:
     - alias: al2023@latest
+
   # Node IAM role created in Terraform Karpenter project
   role: "arn:aws:iam::564956047797:role/retail-gleamgoods-karpenter-node-role"
-  # Auto-discover subnets (the cluster tags)
+
+  # Auto-discover subnets (using the Karpenter discovery tag)
   subnetSelectorTerms:
     - tags:
-        # Make sure the worker nodes are private subnet
-        kubernetes.io/cluster/retail-gleamgoods-eks: owned
-        kubernetes.io/role/internal-elb: "1"
+        karpenter.sh/discovery: retail-gleamgoods-eks
+
   # Auto-discover security groups
   securityGroupSelectorTerms:
     - tags:
-        kubernetes.io/cluster/retail-gleamgoods-eks: owned
+        karpenter.sh/discovery: retail-gleamgoods-eks
+
   # Required for Karpenter auto-discovery of resources
   tags:
     karpenter.sh/discovery: retail-gleamgoods-eks
+
   # Recommended EBS configuration
   blockDeviceMappings:
     - deviceName: /dev/xvda
@@ -30,6 +33,7 @@ spec:
         volumeType: gp3
         encrypted: true
         deleteOnTermination: true
+
   # Recommended IMDS Metadata options
   metadataOptions:
     httpTokens: required
@@ -57,5 +61,12 @@ spec:
   # balancers), so Karpenter will launch nodes **exclusively in private
   # subnets**, with NO public IPs — matching enterprise security
   # standards.
-  # Use this filter ALWAYS in production clusters for node provisioning.
+  #
+  # We now use the dedicated Karpenter discovery tag instead:
+  #
+  #   karpenter.sh/discovery = retail-gleamgoods-eks
+  #
+  # This tag is applied by Terraform to the private subnets and keeps
+  # Karpenter independent from the Kubernetes load balancer tags while
+  # still ensuring nodes are launched only in the intended subnets.
   # -------------------------------------------------------------------
