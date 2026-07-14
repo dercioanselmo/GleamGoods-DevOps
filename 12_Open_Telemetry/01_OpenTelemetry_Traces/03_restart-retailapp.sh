@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restart all Retail Store microservice deployments
+# Restart all GleamGoods microservice deployments
 
 # Optional: pass namespace as first argument (defaults to "default")
 NAMESPACE="${1:-default}"

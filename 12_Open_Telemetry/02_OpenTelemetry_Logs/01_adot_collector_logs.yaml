@@ -21,6 +21,7 @@ spec:
   podSecurityContext:
     runAsUser: 0
     runAsGroup: 0
+    # 0 means root.
   
    # MISSING: Add tolerations to run on all nodes
   tolerations:
@@ -54,8 +55,8 @@ spec:
           - /var/log/pods/*/*/*.log
         exclude:
           - /var/log/pods/default_adot-*/*/*.log
-          - /var/log/pods/kube-system_*/*/*.log
-        start_at: end
+          - /var/log/pods/kube-system_*/*/*.log # Reduces the noise
+        start_at: end # Only collect logs from the time the collector starts, not historical logs
     
     processors:
       memory_limiter:
@@ -64,19 +65,19 @@ spec:
       
       k8sattributes:
         extract:
+              # Adding full Kubernetes context for query at cloudwatch
           metadata:
             - k8s.namespace.name
             - k8s.pod.name
             - k8s.container.name
-      
       batch:
         timeout: 10s
     
     exporters:
       awscloudwatchlogs:
         region: us-east-1
-        log_group_name: "/aws/eks/retail-dev-eks/application"
-        log_stream_name: "retail-dev-eks-v4"    # Single Stream
+        log_group_name: "/aws/eks/gleamgoods-eks/application"
+        log_stream_name: "gleamgoods-eks-v4"    # Single Stream. Single is fine for small and medium cluster
         # log_stream_name: "${K8S_NODE_NAME}"         # Per k8s Node 
     
     service:

@@ -1,4 +1,4 @@
-# OpenTelemetry Collector for Retail Store Sample Application
+# OpenTelemetry Collector for GleamGoods Sample Application
 # Supports all 5 microservices: UI, Cart, Orders, Catalog, Checkout
 # Handles OTLP traces with AWS X-Ray integration
 # Filters out health check and monitoring probe traces

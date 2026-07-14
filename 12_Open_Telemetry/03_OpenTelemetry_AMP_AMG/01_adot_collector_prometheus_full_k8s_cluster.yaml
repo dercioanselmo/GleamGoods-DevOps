@@ -18,7 +18,7 @@ spec:
 
   env:
     - name: CLUSTER_NAME
-      value: "retail-dev"  
+      value: "gleamgoods"  
     - name: AWS_REGION
       value: "us-east-1"            
     - name: NODE_NAME  
@@ -338,7 +338,7 @@ spec:
 
       # Resource detection for AWS
       resourcedetection/eks:
-        detectors: [env, eks, ec2, system]
+        detectors: [env]
         timeout: 10s
         override: false
 
@@ -357,7 +357,7 @@ spec:
     # ====================
     exporters:
       prometheusremotewrite:
-        endpoint: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-c2d3d1cd-6e65-42d1-a698-15757a00ae6e/api/v1/remote_write"
+        endpoint: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-031ed12a-aa01-4d40-91d1-9bd2e3fc1ca6/api/v1/remote_write"
         auth:
           authenticator: sigv4auth
 

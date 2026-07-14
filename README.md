@@ -208,11 +208,11 @@ Each microservice includes Helm chart with:
 - [ ] 38 SCA
 
 ## Phase 8 — Open Telemetry K8s Manifests
-- [ ] 39 Adot traces
-- [ ] 40 Adot logs
-- [ ] 41 Open Telemetry Amazon managed Prometheus
-- [ ] 42 Open Telemetry Amazon managed Grafana
-- [ ] 43 Grafana Dashboards
+- [x] 39 Adot traces
+- [x] 40 Adot logs
+- [x] 41 Open Telemetry Amazon managed Prometheus
+- [x] 42 Open Telemetry Amazon managed Grafana
+- [x] 43 Grafana Dashboards
 
 ## Phase 10 — refactor project for multi-environment
 - [ ] 44 TBD

@@ -10,7 +10,7 @@
 ################################################################################
 
 # Configuration - UPDATE THESE VALUES
-AMP_WORKSPACE_ID="ws-c2d3d1cd-6e65-42d1-a698-15757a00ae6e"
+AMP_WORKSPACE_ID="ws-031ed12a-aa01-4d40-91d1-9bd2e3fc1ca6"
 AWS_REGION="us-east-1"
 AMP_ENDPOINT="https://aps-workspaces.${AWS_REGION}.amazonaws.com/workspaces/${AMP_WORKSPACE_ID}"
 
@@ -47,16 +47,16 @@ all_scrape_jobs=$(awscurl --service="aps" --region="$AWS_REGION" \
 echo "All Scape Jobs: $all_scrape_jobs"
 sleep 5
 ################################################################################
-# TEST 3: Discover Retail Store Services
+# TEST 3: Discover GleamGoods Services
 ################################################################################
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "TEST 3: Discover Retail Store Services"
+echo "TEST 3: Discover GleamGoods Services"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-discover_retail_store_services=$(awscurl --service="aps" --region="$AWS_REGION" \
+discover_gleamgoods_services=$(awscurl --service="aps" --region="$AWS_REGION" \
   "${AMP_ENDPOINT}/api/v1/label/service/values" | jq '.')
-echo "Discover Retail Store Services: $discover_retail_store_services"
+echo "Discover GleamGoods Services: $discover_gleamgoods_services"
 sleep 5
 ################################################################################
 # TEST 4: Total Unique Metrics Count
@@ -85,7 +85,7 @@ echo "Total Unique Metrics: $total_unique_metrics"
 echo ""
 echo "all_scrape_jobs: $all_scrape_jobs"
 echo ""
-echo "Discover Retail Store Services: $discover_retail_store_services"
+echo "Discover GleamGoods Services: $discover_gleamgoods_services"
 echo ""
 echo "✓ All tests completed successfully!"
 echo ""
