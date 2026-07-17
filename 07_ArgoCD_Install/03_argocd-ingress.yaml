@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd
+  namespace: argocd
+  annotations:
+    alb.ingress.kubernetes.io/load-balancer-name: gleamgoods-production
+    alb.ingress.kubernetes.io/group.name: gleamgoods
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+
+    # Use the same ACM certificate
+   #alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:564956047797:certificate/e27fa43e-60e8-4b71-ae4e-95e7e7cd3b46
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:564956047797:certificate/169f2752-8de3-4533-9aae-ed32769b5ef4
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443},{"HTTP":80}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+
+    # ArgoCD health endpoint
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+
+    # ExternalDNS
+    external-dns.alpha.kubernetes.io/hostname: argocd.dercioanselmo.com
+
+spec:
+  ingressClassName: alb
+
+  rules:
+    - host: argocd.dercioanselmo.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 80

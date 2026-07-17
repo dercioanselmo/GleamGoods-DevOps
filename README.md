@@ -205,7 +205,7 @@ Each microservice includes Helm chart with:
 
 ## Phase 5 — Application CI Security SCAN
 - [ ] 37 SAST
-- [ ] 38 SCA
+- [x] 38 SCA
 
 ## Phase 8 — Open Telemetry K8s Manifests
 - [x] 39 Adot traces
