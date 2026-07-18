@@ -4,13 +4,14 @@ metadata:
   name: argorollouts
   namespace: argo-rollouts
   annotations:
+    #alb.ingress.kubernetes.io/load-balancer-name: gleamgoods-production
     alb.ingress.kubernetes.io/group.name: gleamgoods
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:564956047797:certificate/169f2752-8de3-4533-9aae-ed32769b5ef4
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443},{"HTTP":80}]'
     alb.ingress.kubernetes.io/ssl-redirect: "443"
-    alb.ingress.kubernetes.io/healthcheck-path: /rollouts/healthz
+    alb.ingress.kubernetes.io/healthcheck-path: /rollouts
     external-dns.alpha.kubernetes.io/hostname: argorollout.dercioanselmo.com
 
     # Basic Auth
@@ -18,16 +19,16 @@ metadata:
     nginx.ingress.kubernetes.io/auth-secret: argorollouts-basic-auth
     nginx.ingress.kubernetes.io/auth-realm: "Argo Rollouts Dashboard"
 
-    # Important fixes for Argo Rollouts dashboard
-    nginx.ingress.kubernetes.io/rewrite-target: /rollouts/$2
+    # Fix for Argo Rollouts dashboard on ALB
     nginx.ingress.kubernetes.io/app-root: /rollouts
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
   ingressClassName: alb
   rules:
     - host: argorollout.dercioanselmo.com
       http:
         paths:
-          - path: /rollouts(/|$)(.*)
+          - path: /rollouts
             pathType: Prefix
             backend:
               service:
