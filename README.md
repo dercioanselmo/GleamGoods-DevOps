@@ -196,7 +196,7 @@ Each microservice includes Helm chart with:
 ## Phase 7 — Application CD with ArgoCD
 - [x] 31 Helm chart templating for the 5 services and test
 - [x] 32 ArgoCD AutoSync Setup with the Helm Chart Manifest
-- [ ] 33 ArgoCD Rollout - Canary
+- [x] 33 ArgoCD Rollout - Convert Deployment in to Rollout and Canary Strategy
 
 ## Phase 9 — DNS configuraion
 - [x] 34 Amazon Route 53 domain setup
@@ -220,7 +220,7 @@ Each microservice includes Helm chart with:
 ### Notes
 ### ArgoCD Installation and config:
  1. Run the script 07/ArgoCD_Install/install-argocd.sh
- 2. Add GithHub tocket to ArgoCD
+ 2. Add GithHub token to ArgoCD
  
 argocd repo add https://github.com/dercioanselmo/GleamGoods-DevOps.git \
   --username dercioanselmo \
