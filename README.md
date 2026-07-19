@@ -217,6 +217,13 @@ Each microservice includes Helm chart with:
 ## Phase 10 — refactor project for multi-environment
 - [ ] 44 TBD
 
+## Phase 11 — Secrets Rotation Setup
+- [x] 45 Enable rotation
+- [x] 46 Lambda Functions
+- [x] 47 Reloader
+
+
+
 ### Notes
 ### ArgoCD Installation and config:
  1. Run the script 07/ArgoCD_Install/install-argocd.sh
