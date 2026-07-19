@@ -21,8 +21,22 @@ resource "helm_release" "secrets_store_csi_driver" {
     {
       name  = "tokenRequests[0].audience"
       value = "pods.eks.amazonaws.com"
-    }
+    },
     #The fix end here
+
+    # syncSecret.enabled alone does NOT keep the synced K8s Secret fresh -
+    # without enableSecretRotation, the driver only re-reads the source
+    # secret on pod mount, so a rotated AWS Secrets Manager value would
+    # never reach the synced catalog-db/orders-db Secrets (or trigger
+    # Reloader) until every consuming pod happened to restart on its own.
+    {
+      name  = "enableSecretRotation"
+      value = "true"
+    },
+    {
+      name  = "rotationPollInterval"
+      value = "2m"
+    }
   ]
 
  # Wait until all pods are ready
