@@ -41,23 +41,7 @@ resource "aws_security_group" "orders_rotation_lambda_sg" {
   }
 }
 
-# Allow each rotation Lambda into its own database only.
-resource "aws_security_group_rule" "rds_mysql_from_catalog_rotation_lambda" {
-  type                     = "ingress"
-  from_port                = 3306
-  to_port                  = 3306
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.rds_mysql_sg.id
-  source_security_group_id = aws_security_group.catalog_rotation_lambda_sg.id
-  description              = "Allow Catalog rotation Lambda"
-}
-
-resource "aws_security_group_rule" "rds_postgresql_from_orders_rotation_lambda" {
-  type                     = "ingress"
-  from_port                = 5432
-  to_port                  = 5432
-  protocol                 = "tcp"
-  security_group_id        = aws_security_group.rds_postgresql_sg.id
-  source_security_group_id = aws_security_group.orders_rotation_lambda_sg.id
-  description              = "Allow Orders rotation Lambda"
-}
+# The RDS-side ingress rules allowing these Lambda SGs in are declared
+# inline on aws_security_group.rds_mysql_sg / rds_postgresql_sg (c6_01 /
+# c9_01) rather than here as separate aws_security_group_rule resources -
+# see the comment there for why mixing the two models is unsafe.

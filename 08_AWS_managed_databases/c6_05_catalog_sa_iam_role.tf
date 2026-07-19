@@ -10,18 +10,6 @@ resource "aws_iam_role" "catalog_getsecrets" {
   }
 }
 
-# Attach IAM Policy to Role
-# NOTE: kept pointed at the original shared-secret policy on purpose - see
-# aws_iam_role_policy_attachment.catalog_new_db_secret_attach in c5_02.
-# Do not repoint/remove this until the app is confirmed cut over to
-# gleamgoods-catalog-db-secret (values-catalog.yaml secretName change,
-# both repos), otherwise the CSI driver loses read access to the secret
-# it's still actively mounting and any new pod scheduling breaks.
-resource "aws_iam_role_policy_attachment" "catalog_db_secret_attach" {
-  policy_arn = aws_iam_policy.retailstore_db_secret_policy.arn
-  role       = aws_iam_role.catalog_getsecrets.name
-}
-
 # Outputs
 output "catalog_sa_getsecrets_role_arn" {
   description = "IAM Role ARN for Catalog PostgreSQL Get Secrets from AWS Secrets Manager"

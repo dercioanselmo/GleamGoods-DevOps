@@ -14,6 +14,18 @@ resource "aws_security_group" "rds_mysql_sg" {
     ]
   }
 
+  # Kept inline (rather than a separate aws_security_group_rule) because this
+  # resource already manages its ingress set via inline blocks - mixing the
+  # two models causes Terraform to treat itself as authoritative and revoke
+  # any rule added by a standalone aws_security_group_rule on the next apply.
+  ingress {
+    description     = "Allow Catalog rotation Lambda"
+    from_port        = 3306
+    to_port          = 3306
+    protocol         = "tcp"
+    security_groups  = [aws_security_group.catalog_rotation_lambda_sg.id]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0

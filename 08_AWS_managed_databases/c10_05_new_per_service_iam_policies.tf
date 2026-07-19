@@ -1,19 +1,13 @@
 # --------------------------------------------------------------------
-# New per-service IAM policies (additive)
+# Per-service IAM policies
 # --------------------------------------------------------------------
-# Each Pod Identity role gets an ADDITIONAL policy scoped only to its own
-# new secret, attached alongside (not replacing) the legacy shared-secret
-# policy in c5_02. This is intentionally additive so applying it has zero
-# effect on currently running pods or the CSI driver's existing access -
-# it only grants new permissions, it doesn't revoke old ones.
-#
-# Cleanup (do this ONLY after values-catalog.yaml / values-orders.yaml have
-# been repointed at the new secret names and the app is confirmed healthy):
-#   1. Delete aws_iam_role_policy_attachment.catalog_db_secret_attach (c6_05)
-#      and .orders_postgresql_db_secret_attach (c9_04)
-#   2. Delete aws_iam_policy.retailstore_db_secret_policy (c5_02)
-#   3. Rename these two attachments/policies if you want to drop the
-#      "_new_"/"_v2" naming at that point (optional, cosmetic).
+# Each Pod Identity role has a policy scoped only to its own secret. These
+# were originally added alongside the legacy shared-secret policy during
+# the cutover (kept additive so applying it had zero effect on pods still
+# reading the old secret); that legacy policy (c5_02) and its attachments
+# (c6_05, c9_04) have since been removed now that the app is confirmed
+# running on these. The "_new_" attachment names are cosmetic leftovers
+# from that transition - fine to rename later, not worth a state churn now.
 
 resource "aws_iam_policy" "catalog_db_secret_policy" {
   name        = "${local.name}-catalog-db-secret-policy"
