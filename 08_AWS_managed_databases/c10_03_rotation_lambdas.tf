@@ -21,6 +21,10 @@ resource "aws_serverlessapplicationrepository_cloudformation_stack" "catalog_rot
     # MySQL 8.0 supports up to 32-char usernames; the SAR default of 16
     # is too small to fit "catalog_app" + the Lambda's "_clone" suffix.
     usernameLimit = "32"
+    # Default excludeCharacters (/@"'\) still lets through punctuation
+    # (observed: %, >) that breaks the app's DSN string construction.
+    # Alphanumeric-only avoids that entire class of bug.
+    excludePunctuation = "true"
   }
 }
 
@@ -35,6 +39,10 @@ resource "aws_serverlessapplicationrepository_cloudformation_stack" "orders_rota
     superuserSecretArn  = aws_secretsmanager_secret.orders_db_master_secret.arn
     vpcSecurityGroupIds = aws_security_group.orders_rotation_lambda_sg.id
     vpcSubnetIds        = join(",", data.terraform_remote_state.vpc.outputs.private_subnet_ids)
+    # See matching comment in catalog_rotation above - default
+    # excludeCharacters still allows punctuation (observed: <) that can
+    # break the app's DSN string construction. Alphanumeric-only avoids it.
+    excludePunctuation = "true"
   }
 }
 
