@@ -2,8 +2,11 @@
 
 Creates the networking foundation. Everything else in this project runs inside: one VPC, 3 public + 3 private subnets spread across 3 Availability Zones, NAT per AZ, and the routing to tie it together. Every later module (`03_EKS_with_addons` onward) reads this module's state via `data.terraform_remote_state` to get the VPC ID and subnet IDs — nothing downstream creates its own networking.
 
-![03_VPC.png](images/03_VPC.png)
+## VPC with Private and Public Subnets - Architecture
+![03_VPC.png](images/01_VPC.png)
 
+## VPC with Private and Public Subnets - Traffic Flow
+![02_AWS_VPC_Trafic-Flow.drawio.png](images/02_AWS_VPC_Trafic-Flow.drawio.png)
 
 ## What this creates
 
