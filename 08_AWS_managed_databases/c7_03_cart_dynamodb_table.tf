@@ -5,11 +5,9 @@
 # The Cart microservice code is currently hardcoded to connect
 # to the AWS region "us-west-2" (DynamoDB endpoint).
 # To ensure compatibility without modifying application code,
-# we are creating this DynamoDB table specifically in the
+# Creating this DynamoDB table specifically in the
 # "us-west-2" region using an aliased AWS provider (aws.west2).
-# File: DynamoDBConfiguration.java
-# GitHub Link: https://github.com/aws-containers/gleamgoods-app/blob/v1.3.0/src/cart/src/main/java/com/amazon/sample/carts/config/DynamoDBConfiguration.java
-# CodeLine: builder.region(Region.US_WEST_2);
+# File: DynamoDBConfiguration.java from Application repository
 # ---------------------------------------------------------------
 
 # DynamoDB Table: Items - us-west-2

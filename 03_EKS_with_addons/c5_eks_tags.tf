@@ -12,7 +12,7 @@
 # Karpenter, Managed Node Groups, and Cluster Autoscaler REQUIRE 
 # "owned" subnets so they can launch EC2 instances and attach ENIs.
 #
-# In this project, we set all EKS subnets to **owned** to ensure
+# In this project, it is set all EKS subnets to **owned** to ensure
 # Karpenter can provision nodes successfully.
 # -------------------------------------------------------------------
 

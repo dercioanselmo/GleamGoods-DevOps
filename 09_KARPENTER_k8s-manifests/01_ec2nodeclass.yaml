@@ -52,7 +52,7 @@ spec:
   # may accidentally provision worker nodes in PUBLIC subnets, which
   # gives EC2 instances public IP addresses (NOT secure).
   #
-  # To enforce a private-only Kubernetes data plane, we add an extra
+  # To enforce a private-only Kubernetes data plane, it was add an extra
   # filter:
   #
   #   kubernetes.io/role/internal-elb = "1"
@@ -62,7 +62,7 @@ spec:
   # subnets**, with NO public IPs — matching enterprise security
   # standards.
   #
-  # We now use the dedicated Karpenter discovery tag instead:
+  # Now use the dedicated Karpenter discovery tag instead:
   #
   #   karpenter.sh/discovery = retail-gleamgoods-eks
   #
