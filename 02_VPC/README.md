@@ -63,18 +63,6 @@ tags = {
 - `public_subnet_ids` (list)
 - `public_subnet_map` (map of AZ → subnet ID — used where a specific AZ's public subnet needs to be picked deliberately, rather than just any of the three)
 
-## CI/CD
-
-`.github/workflows/terraform-02-vpc.yaml`, triggered on push to `main` touching anything under `02_VPC/**`:
-
-1. **secret-scan** — Trivy scans this directory for accidentally-committed secrets; fails the run and opens a GitHub issue tagging `@dercioanselmo` if it finds one.
-2. **plan** — `terraform init` / `validate` / `plan`, uploads the plan as a build artifact (`tfplan-02-vpc`).
-3. **apply** — downloads that exact plan artifact and applies it (`terraform apply plan.tfplan`), gated behind the GitHub Environment `02-VPC-Apply`.
-
-Using an uploaded plan artifact rather than re-planning in the apply job means what gets applied is guaranteed to be exactly what was reviewed in the plan step — no drift between plan and apply even if `main` moves in between. This same three-job shape (secret-scan → plan-with-artifact → environment-gated apply) is reused by every other numbered module's workflow (`03` through `08`).
-
-There's also a matching `terraform-02-vpc-destroy.yaml` for tearing this down independently, not reviewed here yet.
-
 ## State
 
 Remote, in the bucket from `01_remote_backend_s3bucket`, key `GleamGoods/vpc/terraform.tfstate`.

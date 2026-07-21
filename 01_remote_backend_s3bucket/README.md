@@ -49,9 +49,7 @@ Several modules also read *another* module's outputs at plan time via `data.terr
 
 ## Applying this module
 
-This is the one module in the repo **without a corresponding GitHub Actions workflow** (`.github/workflows/terraform-02-*` through `terraform-08-*` exist; there is no `terraform-01-*`). That's intentional, not an oversight: every workflow authenticates to AWS and then needs a place to store its own state, which is this bucket — so it can't be the thing that creates itself via CI. It has to be applied manually, once, before any other module's workflow can run for the first time in a new AWS account.
-
-Because of that, **this module's own state is local** (`01_remote_backend_s3bucket/terraform.tfstate`, sitting in this directory) rather than remote — there's nothing else for it to point at. It's correctly excluded from git (`*.tfstate` in `.gitignore`, confirmed not tracked), which means **it exists only on whichever machine last ran `apply` here** — it isn't backed up anywhere. If that machine/disk is lost, the bucket itself would still exist in AWS, but Terraform would no longer know about it and `terraform import` would be needed to recover management of it.
+This is the one module in the repo without a corresponding GitHub Actions workflow. That's intentional, not an oversight: every workflow authenticates to AWS and then needs a place to store its own state, which is this bucket.
 
 ```bash
 cd 01_remote_backend_s3bucket
@@ -59,7 +57,7 @@ terraform init
 terraform apply
 ```
 
-After that succeeds, copy the resulting bucket name into every other module's `backend "s3" { bucket = "..." }` block (they should already match the current bucket — this step only matters if the bucket is ever recreated).
+After apply, copy the resulting bucket name into every other module's `backend "s3" { bucket = "..." }` block.
 
 ## Deletion protection
 
