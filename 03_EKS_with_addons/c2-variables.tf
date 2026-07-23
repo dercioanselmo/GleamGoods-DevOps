@@ -169,3 +169,30 @@ variable "cluster_log_types" {
   type        = list(string)
   default     = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 }
+
+# --------------------------------------------------------
+# EKS Addon Versions (pinned - see addon .tf files)
+# --------------------------------------------------------
+
+# Explicit, pinned versions for every aws_eks_addon in this module. Nothing
+# here moves on its own - bump a value deliberately when you want that addon
+# to upgrade. Each *_default/*_latest data source pair (in the addon's own
+# .tf file) is kept purely for visibility (their outputs tell you when a
+# newer version exists) and no longer drives what actually gets installed.
+# Defaults below match what's live as of the day this was pinned, so
+# applying this change alone is a no-op.
+variable "addon_versions" {
+  description = "Pinned EKS addon versions for this cluster's Kubernetes version. Bump deliberately when upgrading."
+  type = object({
+    pod_identity_agent = string
+    ebs_csi             = string
+    external_dns        = string
+    metrics_server       = string
+  })
+  default = {
+    pod_identity_agent = "v1.3.10-eksbuild.3"
+    ebs_csi             = "v1.62.0-eksbuild.1"
+    external_dns        = "v0.21.0-eksbuild.6"
+    metrics_server       = "v0.8.1-eksbuild.11"
+  }
+}

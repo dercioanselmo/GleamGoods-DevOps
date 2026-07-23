@@ -15,7 +15,10 @@ data "aws_eks_addon_version" "prometheus_node_exporter_latest" {
 resource "aws_eks_addon" "prometheus_node_exporter" {
   cluster_name  = data.terraform_remote_state.eks.outputs.eks_cluster_id
   addon_name    = "prometheus-node-exporter"
-  addon_version = data.aws_eks_addon_version.prometheus_node_exporter_latest.version  
+  # Pinned - see var.addon_versions in c2_variables.tf. The _default/_latest
+  # data sources above are kept only so their outputs show when a newer
+  # version becomes available; they no longer drive this value.
+  addon_version = var.addon_versions.prometheus_node_exporter
   # Conflict resolution
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"

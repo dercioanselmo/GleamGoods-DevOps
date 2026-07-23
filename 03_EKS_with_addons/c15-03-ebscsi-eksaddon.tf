@@ -21,7 +21,10 @@ resource "aws_eks_addon" "ebs_csi" {
   ]
   cluster_name                = aws_eks_cluster.main.name
   addon_name                  = "aws-ebs-csi-driver"
-  addon_version               = data.aws_eks_addon_version.ebs_csi_latest.version
+  # Pinned - see var.addon_versions in c2-variables.tf. The _default/_latest
+  # data sources below are kept only so their outputs show when a newer
+  # version becomes available; they no longer drive this value.
+  addon_version               = var.addon_versions.ebs_csi
 
   service_account_role_arn    = aws_iam_role.ebs_csi_iam_role.arn
 

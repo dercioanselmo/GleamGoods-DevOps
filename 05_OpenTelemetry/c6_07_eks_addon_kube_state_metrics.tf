@@ -17,7 +17,10 @@ data "aws_eks_addon_version" "kube_state_metrics_latest" {
 resource "aws_eks_addon" "kube_state_metrics" {
   cluster_name  = data.terraform_remote_state.eks.outputs.eks_cluster_id
   addon_name    = "kube-state-metrics"
-  addon_version = data.aws_eks_addon_version.kube_state_metrics_latest.version  
+  # Pinned - see var.addon_versions in c2_variables.tf. The _default/_latest
+  # data sources above are kept only so their outputs show when a newer
+  # version becomes available; they no longer drive this value.
+  addon_version = var.addon_versions.kube_state_metrics
   # Conflict resolution
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"

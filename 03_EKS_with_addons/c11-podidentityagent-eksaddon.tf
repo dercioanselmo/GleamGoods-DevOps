@@ -18,8 +18,10 @@ resource "aws_eks_addon" "podidentity" {
   addon_name                  = "eks-pod-identity-agent"
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
-  # Use the latest EKS addon version compatible with the cluster's Kubernetes version
-  addon_version               = data.aws_eks_addon_version.pia_latest.version
+  # Pinned - see var.addon_versions in c2-variables.tf. The _default/_latest
+  # data sources above are kept only so their outputs show when a newer
+  # version becomes available; they no longer drive this value.
+  addon_version               = var.addon_versions.pod_identity_agent
 }
 
 

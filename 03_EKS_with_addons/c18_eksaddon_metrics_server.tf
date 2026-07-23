@@ -18,8 +18,10 @@ resource "aws_eks_addon" "metrics_server" {
   addon_name                  = "metrics-server"
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
-  # Use the latest EKS addon version compatible with the cluster's Kubernetes version
-  addon_version               = data.aws_eks_addon_version.metrics_server_latest.version
+  # Pinned - see var.addon_versions in c2-variables.tf. The _default/_latest
+  # data sources above are kept only so their outputs show when a newer
+  # version becomes available; they no longer drive this value.
+  addon_version               = var.addon_versions.metrics_server
 }
 
 

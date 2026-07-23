@@ -18,7 +18,10 @@ resource "aws_eks_addon" "adot" {
   depends_on = [aws_eks_addon.cert_manager]  
   cluster_name  = data.terraform_remote_state.eks.outputs.eks_cluster_id
   addon_name    = "adot"
-  addon_version = data.aws_eks_addon_version.adot_latest.version
+  # Pinned - see var.addon_versions in c2_variables.tf. The _default/_latest
+  # data sources above are kept only so their outputs show when a newer
+  # version becomes available; they no longer drive this value.
+  addon_version = var.addon_versions.adot
   
   # Configuration for the addon
   configuration_values = jsonencode({
