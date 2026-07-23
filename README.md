@@ -225,7 +225,7 @@ Each microservice includes Helm chart with:
 
 
 ### Notes
-### ArgoCD Installation and config:
+## ArgoCD Installation and config:
  1. Run the script 07/ArgoCD_Install/install-argocd.sh
  2. Add GithHub token to ArgoCD
  
@@ -233,3 +233,8 @@ argocd repo add https://github.com/dercioanselmo/GleamGoods-DevOps.git \
   --username dercioanselmo \
   --password ghp_******_p \ (Get this from GitHub settings --> Developer Tools --> Access tocken)
   --name GleamGoods-DevOps
+
+### Detailed per section README:
+1.  [01_remote_backend_s3bucket](01_remote_backend_s3bucket/README.md)
+2.  [02_VPC](02_VPC/README.md)
+3.  [03_EKS_with_addons](03_EKS_with_addons/README.md)

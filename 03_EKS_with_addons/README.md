@@ -100,6 +100,8 @@ reloader.isArgoRollouts = true is enabled because the orders service (and other 
 
 This closes the loop between AWS Secrets Manager rotating a secret (such as a database password) and the application actually picking up the new value. After the updated secret is synchronized into Kubernetes (for example, by External Secrets Operator), Reloader detects the change and restarts the affected pods so they load the updated secret. See `08_AWS_managed_databases`
 
+**Full secrets architecture:** [`SECRETS.md`](../SECRETS.md)
+
 ## Providers
 
 `c12-helm-and-kubernetes-providers.tf` configures the `helm` and `kubernetes` Terraform providers to authenticate against the EKS cluster created by this module. Authentication uses a short-lived token obtained from `data.aws_eks_cluster_auth`, so each terraform plan or terraform apply retrieves a fresh token, eliminating concerns about stale credentials.
@@ -148,3 +150,16 @@ Remote, same backend bucket, key `GleamGoods/eks/terraform.tfstate`.
 ## Destroy order
 
 This module must be destroyed after `04_EKS_Karpenter`, `05_OpenTelemetry`, and `08_AWS_managed_databases`, as those modules consume outputs from this EKS module. It must be destroyed before `02_VPC`, since this module depends on the VPC outputs exported by that module.
+
+## Pinned version map (for monitoring — every tool in the project with a fixed version)
+
+| Tool | Module | Pinned in | Current pinned version | How to check for a newer one |
+|---|---|---|---|---|
+| Pod Identity Agent | `03_EKS_with_addons` | `c2-variables.tf` → `var.addon_versions.pod_identity_agent` | `v1.3.10-eksbuild.3` | `terraform output pod_identity_agent_eksaddon_lastest_version` |
+| EBS CSI Driver | `03_EKS_with_addons` | `c2-variables.tf` → `var.addon_versions.ebs_csi` | `v1.62.0-eksbuild.1` | `terraform output ebs_csi_addon_latest_version` |
+| ExternalDNS | `03_EKS_with_addons` | `c2-variables.tf` → `var.addon_versions.external_dns` | `v0.21.0-eksbuild.6` | `terraform output externaldns_addon_latest_version` |
+| metrics-server | `03_EKS_with_addons` | `c2-variables.tf` → `var.addon_versions.metrics_server` | `v0.8.1-eksbuild.11` | `terraform output metrics_server_eksaddon_lastest_version` — **already behind**: AWS's latest was observed at `v0.9.0-eksbuild.2` while this table was being written; not yet bumped |
+| ADOT | `05_OpenTelemetry` | `c2_variables.tf` → `var.addon_versions.adot` | `v0.151.0-eksbuild.2` | No `_latest` output exposed yet — run `aws eks describe-addon-versions --addon-name adot --kubernetes-version 1.35 --query 'addons[].addonVersions[0].addonVersion' --output text` |
+| cert-manager | `05_OpenTelemetry` | `c2_variables.tf` → `var.addon_versions.cert_manager` | `v1.21.0-eksbuild.2` | Same as above, `--addon-name cert-manager` |
+| kube-state-metrics | `05_OpenTelemetry` | `c2_variables.tf` → `var.addon_versions.kube_state_metrics` | `v2.19.1-eksbuild.2` | Same as above, `--addon-name kube-state-metrics` |
+| prometheus-node-exporter | `05_OpenTelemetry` | `c2_variables.tf` → `var.addon_versions.prometheus_node_exporter` | `v1.11.1-eksbuild.7` | Same as above, `--addon-name prometheus-node-exporter` |
