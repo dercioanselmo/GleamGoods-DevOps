@@ -2,26 +2,19 @@
 
 This is the single, cross-cutting reference for how every secret in this project is created, stored, delivered to a running pod, and rotated.
 
-Scope: AWS Secrets Manager secrets, the Kubernetes-side delivery pipeline (Secrets Store CSI Driver + AWS provider + Pod Identity), the rotation Lambdas, and the auto-refresh loop (Reloader).
+It focuses on secrets managed in AWS Secrets Manager — how they are created, synchronized into Kubernetes, consumed by applications, and rotated over time. It also covers the Kubernetes-side delivery mechanism (Secrets Store CSI Driver, AWS Provider, EKS Pod Identity, and Reloader).
 
 ---
 
-## 1. Inventory — every secret in this project
+## 1. Inventory
 
 | Secret | Where it lives | Created by | Rotates? | Consumed by |
 |---|---|---|---|---|
-| `gleamgoods-db-secret` | AWS Secrets Manager | Manually, out-of-band (not Terraform) | **No** | `08_AWS_managed_databases` (Terraform `data` source only) — sets the RDS **master** username/password on both `catalog_rds` (MySQL) and `orders_postgres` (Postgres) instances |
 | `gleamgoods-catalog-db-secret` | AWS Secrets Manager | Terraform (`aws_secretsmanager_secret` container; initial value set manually once) | **Yes** — alternating users, 30-day schedule | Catalog pod, via Secrets Store CSI Driver → K8s Secret `catalog-db` |
 | `gleamgoods-catalog-db-secret-master` | AWS Secrets Manager | Terraform (container; value copied from `gleamgoods-db-secret` once) | No (not itself rotated — it's the admin credential the rotation Lambda uses) | Catalog rotation Lambda only, via `superuserSecretArn` |
 | `gleamgoods-orders-db-secret` | AWS Secrets Manager | Terraform (container; initial value set manually once) | **Yes** — alternating users, 30-day schedule | Orders pod, via Secrets Store CSI Driver → K8s Secret `orders-db` |
 | `gleamgoods-orders-db-secret-master` | AWS Secrets Manager | Terraform (container; value copied from `gleamgoods-db-secret` once) | No | Orders rotation Lambda only, via `superuserSecretArn` |
-| `gleamgoods/argocd/admin-password` | AWS Secrets Manager | ArgoCD install script (`07_ArgoCD_Install/01_install-argocd.sh`) | No | Human login to the ArgoCD UI — **not** Terraform-managed, not part of the CSI/rotation system at all |
-| GitHub Actions `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | GitHub repo secrets (not AWS Secrets Manager) | Manually, in GitHub repo settings | No | Every `terraform-*.yaml` CI workflow, to authenticate to AWS. Long-lived static IAM user keys, not OIDC federation — the weakest credential in this whole system (see §7) |
-| Redis (checkout's cache) | N/A — no secret exists | — | — | `aws_elasticache_cluster.checkout_redis` has no `auth_token`, no `transit_encryption_enabled`. Access control is network-layer only (security group), not a credential |
-| DynamoDB (cart's store) | N/A — no secret exists | — | — | Cart authenticates via IAM (Pod Identity), not a credential — there's nothing to leak because there's nothing issued |
-| ALB TLS certificate | AWS Certificate Manager (ACM), not Secrets Manager | Provisioned outside this repo (referenced by ARN in `ui`'s Ingress annotations) | ACM auto-renews | AWS Load Balancer Controller, for the `gleamgoods.dercioanselmo.com` / `argocd.dercioanselmo.com` listeners |
 
-Only **two** secrets in the entire project go through the full rotation + CSI + Reloader machinery described below: `gleamgoods-catalog-db-secret` and `gleamgoods-orders-db-secret`. Everything else in the table is either static, externally managed, or not a credential at all.
 
 ---
 
@@ -78,12 +71,12 @@ flowchart TB
     ORDPOD -- "DB connection" --> PG
 ```
 
-Two independent things are happening simultaneously and it's worth keeping them mentally separate:
+Two independent processes are happening simultaneously, and it's important to keep them conceptually separate:
 
-1. **The rotation loop** (top half): Secrets Manager → Lambda → RDS. This changes the *password in the database* and *the value stored in Secrets Manager*. Nothing in the cluster is involved yet.
-2. **The delivery loop** (bottom half): Secrets Manager → CSI driver → K8s Secret → pod env → Reloader restart. This is what makes a *running pod* actually start using the new credential. It runs on its own schedule (a 2-minute poll), independent of when rotation happens.
+1. The rotation loop (top half): **Secrets Manager → Lambda → RDS**. This process rotates the database credentials by updating both the password stored in the database and the corresponding secret in AWS Secrets Manager. At this stage, nothing inside the Kubernetes cluster has changed.
+2. The delivery loop (bottom half): **Secrets Manager → Secrets Store CSI Driver → Kubernetes Secret → Pod environment → Reloader restart**. This process propagates the updated secret into the cluster and ultimately causes application pods to restart so they begin using the new credential. It runs independently of the rotation process, polling for secret changes approximately every two minutes.
 
-The gap between these two loops — "the DB password changed" vs. "the pod noticed" — is exactly what makes zero-downtime rotation possible or impossible, and is the subject of most of §4 and §5 below.
+These two processes are intentionally independent, which means there is a period where the database has already switched to the new credential while some pods have not. Sections 4 and 5 explain how the project manages that transition so applications continue running normally.
 
 ---
 
@@ -91,47 +84,80 @@ The gap between these two loops — "the DB password changed" vs. "the pod notic
 
 This is the mechanical path, step by step, for e.g. `catalog`:
 
-1. **`SecretProviderClass` (`catalog-secrets`)** — a Kubernetes custom resource (from the `secrets-store.csi.x-k8s.io` CRD group) declares: *"fetch the secret named in `app.persistence.secret.secretsManager.secretName` (`gleamgoods-catalog-db-secret`) from Secrets Manager in `us-east-1`, using Pod Identity, and extract its `username`/`password` JSON fields."* It also declares a `secretObjects` block: *"mirror those extracted values into a native Kubernetes `Secret` named `catalog-db`, under keys `RETAIL_CATALOG_PERSISTENCE_USER`/`RETAIL_CATALOG_PERSISTENCE_PASSWORD`."*
+1. **`SecretProviderClass` (`catalog-secrets`)** — A Kubernetes custom resource (CRD `secrets-store.csi.x-k8s.io`) that defines how secrets should be retrieved from AWS Secrets Manager. It instructs the Secrets Store CSI Driver to fetch the secret whose name is configured in app.persistence.secret.secretsManager.secretName (for example, `gleamgoods-catalog-db-secret`) using EKS Pod Identity, and extract the username and password fields from the secret's JSON payload.
 
-2. **The pod's volume mount** — the catalog Deployment/Rollout mounts a CSI volume (`aws-secrets`, driver `secrets-store.csi.k8s.io`) pointing at that `SecretProviderClass`, at `/mnt/secrets-store`. **The app never reads this path directly** — the mount's only real job is to trigger the CSI driver to actually perform the fetch-and-sync (mounting a CSI volume is what invokes the driver's `NodePublishVolume` call, which is when the secret gets fetched). This is a deliberate but easy-to-miss design point: the volume exists to make step 3 happen, not to be read.
+    The resource also defines a `secretObjects` section, which tells the CSI Driver to mirror those extracted values into a native Kubernetes Secret named `catalog-db`. The values are stored under the keys `RETAIL_CATALOG_PERSISTENCE_USER` and `RETAIL_CATALOG_PERSISTENCE_PASSWORD`, allowing the application to consume them like any other Kubernetes Secret.
 
-3. **Secrets Store CSI Driver + ASCP provider** — the driver receives the mount request, hands it to the AWS-specific provider plugin (ASCP), which:
-   - Authenticates as the pod's assigned Pod Identity role (see §4).
-   - Calls `secretsmanager:GetSecretValue` for `gleamgoods-catalog-db-secret`.
-   - Extracts `username`/`password` via the JMESPath expressions in the `SecretProviderClass`.
-   - Writes them to the mounted volume files (unused by the app, but this is what "mounting" means concretely).
-   - Because `secretObjects` was declared, it also creates/updates a real Kubernetes `Secret` object (`catalog-db`) with those values — this is `syncSecret.enabled=true` at work.
+2. **The pod's CSI volume mount** — The catalog Deployment/Rollout mounts a CSI volume (aws-secrets, driver secrets-store.csi.k8s.io) that references the SecretProviderClass, mounting it at /mnt/secrets-store.
 
-4. **`envFrom: secretRef: catalog-db`** — the container spec pulls every key in that K8s `Secret` in as environment variables. This happens **once, at container start**. Kubernetes does not live-update a running container's environment when the underlying `Secret` object changes later — this is a hard platform limitation, not a bug in this setup, and it's the reason §5 (Reloader) exists at all.
+    Although the application never reads files from `/mnt/secrets-store`, the volume mount is still required. Mounting the CSI volume causes Kubernetes to invoke the CSI driver's `NodePublishVolume` operation, which is when the Secrets Store CSI Driver authenticates with AWS (via EKS Pod Identity), fetches the secret from Secrets Manager, and processes the associated `SecretProviderClass`.
 
-5. **The app connects to the database** using `RETAIL_CATALOG_PERSISTENCE_USER`/`PASSWORD` from its environment, built into a MySQL DSN by the Go application code.
+    Because the `SecretProviderClass` includes a secretObjects section, the fetched values are also synchronized into the native Kubernetes Secret (catalog-db). The application consumes that Kubernetes Secret as environment variables rather than reading the mounted files directly.
 
-Orders follows the identical pattern (`orders-secrets` → `orders-db` → `RETAIL_ORDERS_PERSISTENCE_USERNAME`/`PASSWORD`), against PostgreSQL instead of MySQL.
+    This is an intentional design choice: the CSI volume is present to activate the Secrets Store CSI Driver and keep the Kubernetes Secret synchronized with AWS Secrets Manager, while the application continues to use the familiar Kubernetes Secret interface.
+
+
+3. **Secrets Store CSI Driver + AWS Secrets & Configuration Provider (ASCP)** — When the CSI volume is mounted, the Secrets Store CSI Driver receives the mount request and delegates the AWS-specific work to the AWS Secrets & Configuration Provider (ASCP). Together, they perform the following steps:
+
+ - Authenticate to AWS using the pod's assigned EKS Pod Identity IAM role.
+ - Call `secretsmanager:GetSecretValue` to retrieve `gleamgoods-catalog-db-secret`.
+ - Extract the username and password fields using the JMESPath expressions defined in the `SecretProviderClass`.
+ - Write the extracted values to files under the mounted CSI volume (these files are not used by the application, but they are the driver's primary output).
+ - Because the SecretProviderClass defines a secretObjects section, the Secrets Store CSI Driver also synchronizes those values into a native Kubernetes Secret (`catalog-db`). This synchronization is enabled by syncSecret.enabled=true, allowing the application to consume the secret through the standard Kubernetes Secret interface, instead of reading the mounted files directly.
+
+
+4. **`envFrom: secretRef: catalog-db`** — The container specification imports all key/value pairs from the Kubernetes Secret object catalog-db as environment variables inside the container.
+
+    This injection happens only during container creation. Kubernetes reads the Secret value when the container starts and sets the corresponding environment variables in the container process. If the underlying Kubernetes Secret object is updated later, Kubernetes does not modify the environment variables of an already-running container. This is expected Kubernetes behavior, not a limitation or bug in this setup.
+
+    This is the reason Reloader is required in section 5: when the synchronized Kubernetes Secret changes, Reloader detects the change and triggers a rollout restart, causing new pods to start with the updated secret values.
+
 
 ### Keeping the mounted/synced value fresh: `enableSecretRotation`
 
-Step 3 only happens when the volume is mounted (i.e., at pod start) — matching the label "day-1" behavior. Without extra configuration, a password rotated in Secrets Manager on day 15 would sit there unnoticed by the CSI driver until day-1 came around again for some *other* reason (a redeploy, a node replacement). The CSI Driver Helm release (`03_EKS_with_addons/c16-01-secretstorecsi-helm-install.tf`) explicitly turns on:
+The initial secret retrieval happens when the CSI volume is mounted (normally during pod creation). This represents the "day-1" behavior: the pod starts, the Secrets Store CSI Driver fetches the value from AWS Secrets Manager, and the secret is mounted/synchronized into Kubernetes.
 
-```hcl
+The Secrets Store CSI Driver Helm release (`03_EKS_with_addons/c16-01-secretstorecsi-helm-install.tf`) explicitly enables continuous rotation polling:
+
+```bash
 enableSecretRotation = true
 rotationPollInterval = "2m"
 ```
 
-This makes the driver poll every mounted secret every 2 minutes regardless of pod lifecycle, re-fetch it, and re-sync the K8s `Secret` if it changed. **This was not the default and was missing for a period during this project's build-out** — `syncSecret.enabled=true` alone gives no ongoing freshness guarantee at all. Without `enableSecretRotation`, this entire rotation system would still technically "work" (AWS Secrets Manager side), but the cluster would never find out a rotation happened.
+With this enabled, the CSI Driver periodically checks mounted secrets every two minutes. If a value has changed in AWS Secrets Manager, the driver re-fetches the secret and updates the mounted secret data. When secretObjects is configured, the updated value is also synchronized into the corresponding Kubernetes Secret.
+
+**Important**: `syncSecret.enabled=true` only controls synchronization into a Kubernetes Secret; it does not provide a mechanism for detecting changes. It does not create a refresh loop by itself.
+
+Without `enableSecretRotation`, the AWS Secrets Manager rotation process would still succeed, but the Kubernetes side would not automatically discover the new credential. The database password would change in AWS/RDS, while workloads inside the cluster could continue running with the old credential until a pod restart caused the secret to be fetched again.
 
 ---
 
 ## 4. IAM / Pod Identity model for secrets access
 
-Every AWS-facing permission in this project uses **EKS Pod Identity** (`aws_eks_pod_identity_association`), not IRSA. For secrets specifically:
+Every AWS-facing permission in this project uses EKS Pod Identity (`aws_eks_pod_identity_association`) rather than IRSA. Pod Identity provides the mechanism for Kubernetes workloads to obtain AWS credentials, while IAM roles and policies define the exact permissions each workload receives.
 
-- A single trust policy (`c13-podidentity-assumerole.tf`, reused from `03_EKS_with_addons`) lets principal `pods.eks.amazonaws.com` assume any Pod Identity role in the account.
-- Two **separate, least-privilege** IAM roles exist, one per service:
-  - `retail-gleamgoods-catalog-getsecrets-role`, associated to the `catalog` service account, with `retail-gleamgoods-catalog-db-secret-policy` attached — scoped to `secretsmanager:GetSecretValue` + `DescribeSecret` on `arn:...:secret:gleamgoods-catalog-db-secret*` **only**.
-  - `retail-gleamgoods-orders-postgresql-getsecrets-role`, associated to the `orders` service account, with `retail-gleamgoods-orders-db-secret-policy` attached — scoped to `gleamgoods-orders-db-secret*` **only**.
-- Neither role can read the other service's secret. Neither role can read the master/superuser secrets — those are only ever read by the rotation Lambdas' own execution roles (auto-created by the SAR CloudFormation stack, scoped to their one `superuserSecretArn`).
+For secrets specifically:
 
-This split didn't always exist — until mid-project, both services shared one IAM policy scoped to a single shared secret name pattern (`gleamgoods-db-secret*`), meaning either service's compromised pod could theoretically read the other's DB credential. The per-service split, and the retirement of that legacy shared policy, is covered in `08_AWS_managed_databases`'s history — the policy (`retail-gleamgoods-retailstore-db-secret-policy`) and its two attachments were deleted once both services were confirmed cut over to their own secrets.
+ - A shared IAM trust policy (`c13-podidentity-assumerole.tf`, reused from `03_EKS_with_addons`) allows the EKS Pod Identity service principal: `pods.eks.amazonaws.com` to assume the IAM roles associated with Kubernetes service accounts.
+ - Two separate, least-privilege IAM roles are created, one per service:
+    **Catalog service**
+  - IAM role: `retail-gleamgoods-catalog-getsecrets-role`
+  - Associated with the catalog Kubernetes service account.
+  - Attached policy: `retail-gleamgoods-catalog-db-secret-policy`
+  - Permissions: `secretsmanager:GetSecretValue` and `secretsmanager:DescribeSecret`
+  - Resource scope: `arn:...:secret:gleamgoods-catalog-db-secret*`
+    **Orders service**
+  - IAM role: `retail-gleamgoods-orders-postgresql-getsecrets-role`
+  - Associated with the orders Kubernetes service account.
+  - Attached policy: `retail-gleamgoods-orders-db-secret-policy`
+  - Resource scope: `arn:...:secret:gleamgoods-orders-db-secret*`
+
+
+The **master/superuser** credentials are the administrative account for each RDS instance (similar to the root user in MySQL or the postgres superuser in PostgreSQL). They are never used by the application. Catalog and Orders always connect using their own least-privilege accounts (catalog_app/orders_app and their clones), not the database administrator account.
+
+The only component that needs the master credentials is the AWS Secrets Manager rotation Lambda. During a rotation, the Lambda connects to the database as the administrator so it can run operations such as ALTER USER to reset the password of the inactive application account. Without administrative privileges, it would not be able to rotate another user's password.
+
+Each rotation Lambda has its own IAM execution role, created automatically by the AWS Serverless Application Repository (SAR) CloudFormation stack that deploys the Lambda. That IAM role is granted permission to read only the master secret for the database it manages (its superuserSecretArn). For example, the Catalog rotation Lambda can read only the Catalog master secret, while the Orders rotation Lambda can read only the Orders master secret. Neither Lambda can access the other service's master credentials.
 
 ---
 
@@ -139,9 +165,11 @@ This split didn't always exist — until mid-project, both services shared one I
 
 ### Why two users per service ("alternating users")
 
-The naive rotation approach — generate a new password, change it in the database, update Secrets Manager — has a fatal flaw for this architecture specifically: step 4 of the delivery pipeline above means **already-running pods keep the old password in their environment indefinitely**. If rotation invalidates the old password the instant it runs, any pod that needs a *new* database connection after that moment (connection pool churn, HPA scale-up, a Karpenter spot interruption recycling a node) fails outright until it happens to restart.
+Rotating a database password is easy. Rotating it without breaking applications is the hard part.
 
-The fix used here is AWS's **alternating users** (a.k.a. multi-user) rotation strategy. Each service has two DB accounts:
+The challenge comes from the delivery pipeline described in the previous section. 
+
+This project uses AWS's alternating users (multi-user) rotation strategy:
 
 | Service | Primary user | Clone user |
 |---|---|---|
@@ -154,34 +182,26 @@ On each rotation cycle, the Lambda:
 3. Tests the new credential actually works (`testSecret` step).
 4. Flips the secret's `AWSCURRENT` label to the newly-reset user (`finishSecret` step).
 
-The password of whichever user a stale pod's environment still references is **never touched during that cycle** — it only gets reset on the *next* rotation, once it's become the inactive one again. That's the entire zero-downtime guarantee: a pod holding a stale credential keeps working until it happens to restart for any reason, and it has a full rotation period (30 days, or until the next manual trigger) to do so before that credential would ever be invalidated.
+The key idea is that the password currently being used by running applications is never changed during the current rotation. Instead, the Lambda updates the password of the other database user, verifies that it works, and only then switches Secrets Manager to point applications to that user.
 
-### Why the RDS master account is never used by the apps
-
-Catalog and Orders never authenticate as the RDS master user. `catalog_app`/`orders_app` (and their clones) are dedicated, least-privilege accounts — created once, manually, with grants scoped to only their own database (`GRANT ALL PRIVILEGES ON catalogdb.*` / ownership-equivalent grants on `ordersdb`). This means:
-- A rotation bug can never touch the master credential.
-- The master password (`gleamgoods-db-secret`) can stay completely static without that being a security gap for the *application* attack surface — it's only ever used by Terraform (to set the RDS instance's own master credential) and by the two rotation Lambdas (to run `ALTER USER` as an admin).
+This means existing pods can continue using their current database credentials until they are restarted naturally (for example, during a deployment, node replacement, or autoscaling event). New pods will receive the new credentials, while existing pods continue working with the old ones. The old user's password is not changed until the next rotation cycle, giving every pod up to one full rotation period (30 days, unless rotation is triggered manually sooner) to restart and adopt the new credentials.
 
 ### The rotation Lambdas themselves
 
-Not custom code — both are AWS's own pre-built applications from the Serverless Application Repository (SAR):
+The lambda functions are AWS's own pre-built applications from the Serverless Application Repository (SAR):
 - `retail-gleamgoods-catalog-db-rotation`, from SAR app `SecretsManagerRDSMySQLRotationMultiUser`.
 - `retail-gleamgoods-orders-db-rotation`, from SAR app `SecretsManagerRDSPostgreSQLRotationMultiUser`.
 
 Deployed via `aws_serverlessapplicationrepository_cloudformation_stack` (not a Terraform-managed Lambda resource directly — Terraform manages the CloudFormation stack, which manages the Lambda, its execution role, and its Secrets-Manager-invoke permission). Each Lambda:
 - Runs inside the VPC (private subnets), because RDS is not publicly accessible — each has its own dedicated security group (`catalog_rotation_lambda_sg` / `orders_rotation_lambda_sg`), and the RDS security groups have an inline ingress rule admitting traffic from that specific Lambda SG only (see the "SG authority conflict" note in `08_AWS_managed_databases` — these had to be inline rules, not standalone `aws_security_group_rule` resources, or Terraform would silently revoke them on unrelated changes).
-- Reads its `superuserSecretArn` parameter pointing at its own service's `*-master` secret (not the shared `gleamgoods-db-secret` directly — see below for why).
+- Reads its `superuserSecretArn` parameter pointing at its own service's `*-master` secret.
 - Is on a 30-day `automatically_after_days` schedule, with `rotate_immediately = false` so creating/updating the Terraform resource never force-triggers a rotation as a side effect.
 
-**Why per-service master secrets exist at all (`*-secret-master`):** the multi-user rotation Lambda's `setSecret` step needs to open its *own* connection to the database as the master user, which means the master secret it's given needs a `host`/`port`/`dbname`/`engine` field, not just `username`/`password`. The original `gleamgoods-db-secret` only ever had `username`/`password` (it was written for use as a Terraform `data` source feeding `aws_db_instance.username/password`, which doesn't need those extra fields). Since `gleamgoods-db-secret`'s one set of credentials happens to be valid on *both* the MySQL and Postgres instances, and each engine needs its own `host`, a single secret couldn't serve both — hence one host-qualified master secret per service, each holding a **copy** of the same master username/password.
+Each rotation Lambda needs to connect to its database as the administrator in order to reset application user passwords (ALTER USER). To do that, it requires a Secrets Manager secret containing the complete connection information for that specific database instance, including the administrator username, password, host, port, database engine, and database name.
 
 ### Password character policy (`excludePunctuation`)
 
-Both rotation Lambdas are configured with `excludePunctuation = "true"`. This was **not** the default and was the cause of a real production incident during this project: AWS's default password generator excludes only `/@"'\` — it does *not* exclude other punctuation (`%`, `>`, `<`, `#`, etc.) that can break naive DSN/connection-string construction in application code. A Lambda-generated password containing `%` and `>` for `catalog_app_clone` caused the catalog service to crash-loop with `Access denied` errors immediately after a rotation, even though the credential itself was correct — the Go MySQL driver's connection string parsing choked on the punctuation. `excludePunctuation = "true"` makes every future generated password alphanumeric-only, matching how the original `catalog_app`/`orders_app` passwords were generated by hand, eliminating this entire class of failure.
-
-### Networking gotcha: inline SG rules, not standalone resources
-
-The RDS security groups (`rds_mysql_sg`, `rds_postgresql_sg`) already manage their ingress rules via inline `ingress {}` blocks (for the EKS cluster's access). Terraform's classic `aws_security_group` resource treats itself as the sole source of truth for a security group's rules the moment it has *any* inline block — mixing that with a separate `aws_security_group_rule` resource for the same group causes Terraform to revoke the separately-managed rule on the next unrelated apply. The rotation Lambda's ingress rules had to be added as additional inline blocks in the same resource (not separate resources), and the state had to be surgically migrated (`terraform state rm` on the old standalone rule resources, without an AWS API call) to avoid a live outage window during the fix.
+Both rotation Lambdas are configured with excludePunctuation = "true". This ensures generated database passwords contain only alphanumeric characters, avoiding issues with special characters being incorrectly parsed when building database connection strings in the application.
 
 ---
 
@@ -229,20 +249,7 @@ This happened once (the `excludePunctuation` incident above) and is worth having
 
 ---
 
-## 7. Known gaps / not yet done
-
-Being explicit about what this system does *not* cover, so it isn't mistaken for more complete than it is:
-
-- **`gleamgoods-db-secret` (the RDS master credential) has never been rotated**, and has no rotation configured. It's low-exposure (only Terraform and the two rotation Lambdas ever read it, never an application), but it is the master account for two databases and it's static forever unless someone does this by hand.
-- **`gleamgoods/argocd/admin-password` is not Terraform-managed** — created by a shell script, never rotated, not part of any of the machinery above.
-- **GitHub Actions authenticates to AWS with long-lived static IAM user keys** (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` as repo secrets), not OIDC federation. Every other cross-service trust relationship in this project uses short-lived credentials (Pod Identity); CI is the one place that doesn't.
-- **Checkout's Redis has no AUTH token and no encryption in transit** — access control is security-group-only.
-- **The DevOps repo and the application repo are split** (`GleamGoods-DevOps` vs `GleamGoods`) — the Terraform that creates the secrets lives here, but the `SecretProviderClass`/Helm values that reference them by name live in the separate app repo (`src/catalog/chart`, `src/orders/chart`). Renaming a secret requires a coordinated change across both repos; there's no automated check that they agree with each other.
-- **Cart and Checkout were never brought under Secrets Manager** — not a gap exactly (cart genuinely doesn't need a credential, since DynamoDB access is IAM-only), but worth stating plainly rather than leaving it implicit.
-
----
-
-## 8. Where the underlying Terraform lives
+## 7. Where the underlying Terraform lives
 
 | Concern | File(s) |
 |---|---|
@@ -258,3 +265,4 @@ Being explicit about what this system does *not* cover, so it isn't mistaken for
 | Reloader | `03_EKS_with_addons/c19-01-reloader-helm-install.tf` |
 | `SecretProviderClass` / K8s Secret mapping (per service) | App repo: `src/catalog/chart/templates/secretproviderclass.yaml`, `src/orders/chart/templates/secretproviderclass.yaml` |
 | Reloader annotation + `envFrom` wiring | App repo: `src/catalog/chart/templates/deployment.yaml`, `src/orders/chart/templates/rollout.yaml` |
+| GitHub Actions → AWS auth for all Terraform CI (OIDC, no static keys) | `01_remote_backend_s3bucket/c5-github-actions-terraform-role.tf` — the one module applied manually, so this role already exists before any other module's CI runs; consumed by every `.github/workflows/terraform-*.yaml` |

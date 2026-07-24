@@ -7,6 +7,8 @@ catalog_db_secret_name = "gleamgoods-catalog-db-secret"
 orders_db_secret_name  = "gleamgoods-orders-db-secret"
 rotation_days          = 30
 
+sar_publisher_account_id = "297356227824"
+
 tags = {
   Terraform   = "true"
   Environment = "gleamgoods"

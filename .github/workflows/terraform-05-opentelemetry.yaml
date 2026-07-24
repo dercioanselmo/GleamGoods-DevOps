@@ -1,6 +1,7 @@
 name: "TF-05_OpenTelemetry"
 
 permissions:
+  id-token: write
   contents: read
   issues: write
 
@@ -58,9 +59,6 @@ jobs:
     name: "Terraform Plan (05_OpenTelemetry)"
     runs-on: ubuntu-latest
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: us-east-1
       AWS_REGION: us-east-1
     defaults:
       run:
@@ -78,13 +76,11 @@ jobs:
       - name: Check Terraform version
         run: terraform version
 
-      - name: Validate AWS credentials
-        run: |
-          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-            echo "AWS credentials are missing. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in repo secrets.";
-            exit 1;
-          fi
-          echo "AWS credentials appear present."
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::564956047797:role/github-actions-terraform-role-gleamgoods-devops
+          aws-region: us-east-1
 
       - name: Terraform Init
         run: terraform init
@@ -108,9 +104,6 @@ jobs:
     environment:
       name: 05-OpenTelemetry-Apply
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: us-east-1
       AWS_REGION: us-east-1
     defaults:
       run:
@@ -145,6 +138,12 @@ jobs:
         with:
           terraform_version: 1.12.2
           terraform_wrapper: false
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::564956047797:role/github-actions-terraform-role-gleamgoods-devops
+          aws-region: us-east-1
 
       - name: Terraform Init
         run: terraform init

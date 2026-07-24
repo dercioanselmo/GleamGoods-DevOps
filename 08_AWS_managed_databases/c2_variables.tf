@@ -55,6 +55,12 @@ variable "rotation_days" {
   default     = 30
 }
 
+variable "sar_publisher_account_id" {
+  description = "AWS account ID that publishes the Secrets Manager RDS rotation apps to the Serverless Application Repository (AWS-owned, not this project's account)"
+  type        = string
+  default     = "297356227824"
+}
+
 # Tags applied to all resources created by this configuration
 variable "tags" {
   description = "Tags to apply to EKS and related resources"

@@ -9,7 +9,7 @@
 
 resource "aws_serverlessapplicationrepository_cloudformation_stack" "catalog_rotation" {
   name           = "${local.name}-catalog-db-rotation"
-  application_id = "arn:aws:serverlessrepo:us-east-1:297356227824:applications/SecretsManagerRDSMySQLRotationMultiUser"
+  application_id = "arn:aws:serverlessrepo:us-east-1:${var.sar_publisher_account_id}:applications/SecretsManagerRDSMySQLRotationMultiUser"
   capabilities   = ["CAPABILITY_IAM", "CAPABILITY_RESOURCE_POLICY", "CAPABILITY_AUTO_EXPAND"]
 
   parameters = {
@@ -30,7 +30,7 @@ resource "aws_serverlessapplicationrepository_cloudformation_stack" "catalog_rot
 
 resource "aws_serverlessapplicationrepository_cloudformation_stack" "orders_rotation" {
   name           = "${local.name}-orders-db-rotation"
-  application_id = "arn:aws:serverlessrepo:us-east-1:297356227824:applications/SecretsManagerRDSPostgreSQLRotationMultiUser"
+  application_id = "arn:aws:serverlessrepo:us-east-1:${var.sar_publisher_account_id}:applications/SecretsManagerRDSPostgreSQLRotationMultiUser"
   capabilities   = ["CAPABILITY_IAM", "CAPABILITY_RESOURCE_POLICY", "CAPABILITY_AUTO_EXPAND"]
 
   parameters = {

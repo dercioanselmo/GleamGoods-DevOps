@@ -9,3 +9,11 @@ variable "aws_region" {
   type        = string
   default     = "us-east-1"
 }
+
+variable "tags" {
+  description = "Global tags to apply to all resources"
+  type        = map(string)
+  default = {
+    Terraform = "true"
+  }
+}

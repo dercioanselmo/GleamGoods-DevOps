@@ -1,6 +1,7 @@
 name: "TF-03_EKS_with_addons-Manual-Destroy"
 
 permissions:
+  id-token: write
   contents: read
   issues: write
 
@@ -20,9 +21,6 @@ jobs:
     environment:
       name: 03-EKS-with-addons-Apply
     env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: us-east-1
       AWS_REGION: us-east-1
     defaults:
       run:
@@ -31,13 +29,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate AWS credentials
-        run: |
-          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
-            echo "AWS credentials are missing. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in repo secrets.";
-            exit 1;
-          fi
-          echo "AWS credentials present."
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::564956047797:role/github-actions-terraform-role-gleamgoods-devops
+          aws-region: us-east-1
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v1
