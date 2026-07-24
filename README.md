@@ -242,3 +242,4 @@ Every `terraform-*.yaml` workflow authenticates to AWS via **GitHub OIDC** (no l
 1.  [01_remote_backend_s3bucket](01_remote_backend_s3bucket/README.md)
 2.  [02_VPC](02_VPC/README.md)
 3.  [03_EKS_with_addons](03_EKS_with_addons/README.md)
+4.  [04_EKS_Karpenter](04_EKS_Karpenter/README.md)
