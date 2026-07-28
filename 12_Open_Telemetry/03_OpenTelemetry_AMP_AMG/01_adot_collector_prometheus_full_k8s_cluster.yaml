@@ -102,6 +102,12 @@ spec:
               source_labels:
               - __meta_kubernetes_node_name
               target_label: __metrics_path__
+            # Override job to the conventional kube-prometheus-stack name
+            # ("cadvisor") so community dashboards (e.g. Grafana 15760) that
+            # filter on job="cadvisor" find this data - this job scrapes
+            # nothing else, so an unconditional override is safe.
+            - target_label: job
+              replacement: cadvisor
             scheme: https
             tls_config:
               ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
@@ -149,6 +155,25 @@ spec:
               source_labels:
               - __meta_kubernetes_pod_node_name
               target_label: kubernetes_node
+            # This job scrapes every service annotated prometheus.io/scrape,
+            # so unlike the cadvisor job above, the job label can't just be
+            # overwritten unconditionally - only rename it for the specific
+            # services community dashboards (e.g. Grafana 15760) expect
+            # under conventional kube-prometheus-stack job names. Any other
+            # scraped service keeps the default "kubernetes-service-endpoints"
+            # job label.
+            - action: replace
+              source_labels:
+              - __meta_kubernetes_service_name
+              regex: kube-state-metrics
+              target_label: job
+              replacement: kube-state-metrics
+            - action: replace
+              source_labels:
+              - __meta_kubernetes_service_name
+              regex: prometheus-node-exporter
+              target_label: job
+              replacement: node-exporter
 
           - job_name: kubernetes-service-endpoints-slow
             kubernetes_sd_configs:
