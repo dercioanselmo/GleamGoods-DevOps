@@ -1,6 +1,6 @@
-# Verification of Data Flow & Connectivity Between RetailStore Microservices and AWS Data Plane
+# Verification of Data Flow & Connectivity Between gleamgoods Microservices and AWS Data Plane
 
-This section helps you **verify end-to-end connectivity** between the GleamGoods microservices running on **Amazon EKS** and their respective **AWS managed services (data plane)** — such as 
+This section help us **verify end-to-end connectivity** between the GleamGoods microservices running on **Amazon EKS** and their respective **AWS managed services (data plane)** — such as 
 1. AWS RDS, 
 2. AWS DynamoDB, 
 3. AWS ElastiCache, and 
@@ -11,7 +11,7 @@ Each verification uses a lightweight **client pod** (or AWS CLI pod) that:
 - Uses **EKS Pod Identity** to securely access AWS services (no static IAM keys).
 - Confirms that each microservice is successfully writing or reading data from its assigned AWS service.
 
-By running these commands, you’ll validate:
+By running these commands, we’ll validate:
 ✅ Network routing from Pods → AWS managed endpoints  
 ✅ IAM permissions via Pod Identity  
 ✅ Actual persisted data in the AWS data layer  
@@ -51,7 +51,7 @@ exit
 ```
 
 ## Step-02: Carts -> AWS Dynamodb
-- **AWS Console:** You can also browse via AWS Console -> Dynamodb -> Explore Items
+- **AWS Console:** we can also browse via AWS Console -> Dynamodb -> Explore Items
 ```bash
 # Step-01: Create Pod
 kubectl apply -f 02_cart_dynamodb_awscli_pod.yaml
@@ -180,7 +180,7 @@ exit
 ```
 
 ## Step-05: Orders -> AWS Simple Queue Service (SQS)
-- **AWS Console:** You can also browse via AWS Console -> SQS -> 
+- **AWS Console:** we can also browse via AWS Console -> SQS -> 
 Send and receive messages -> Receive messages -> Click on **Poll for messages**
 ```bash
 # Step-01: Create Pod

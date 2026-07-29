@@ -1,6 +1,6 @@
 # Default values for ui.
 # This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+# Declare variables to be passed into the templates.
 
 replicaCount: 1
 

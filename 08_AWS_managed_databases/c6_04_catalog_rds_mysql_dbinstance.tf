@@ -6,8 +6,8 @@ resource "aws_db_instance" "catalog_rds" {
   instance_class          = "db.t3.micro"
   allocated_storage       = 20
   db_name                 = "catalogdb"
-  username                = local.retailstore_secret_json.username
-  password                = local.retailstore_secret_json.password
+  username                = local.gleamgoods_secret_json.username
+  password                = local.gleamgoods_secret_json.password
   db_subnet_group_name    = aws_db_subnet_group.rds_private.name
   vpc_security_group_ids  = [aws_security_group.rds_mysql_sg.id]
   skip_final_snapshot     = true

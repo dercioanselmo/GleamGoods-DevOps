@@ -21,12 +21,12 @@ metadata:
     ## SSL Settings
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
     # First Generate SSL Certificate via AWS Certificate Manager (ACM) for 
-    # "retailstore2.<YOURDOMAIN>.com" and update the ARN below before deploying this Ingress Service
+    # "gleamgoods.<DOMAIN>.com" and update the ARN below before deploying this Ingress Service
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:180789647333:certificate/cd9998b6-6734-492c-928c-358f95ff7dcf
     # SSL Redirect Setting
     alb.ingress.kubernetes.io/ssl-redirect: '443'       
     # External DNS Annotation
-    external-dns.alpha.kubernetes.io/hostname: retailstore3.stacksimplify.com
+    external-dns.alpha.kubernetes.io/hostname: gleamgoods.dercioanselmo.com
 spec:
   ingressClassName: alb 
   defaultBackend:

@@ -236,7 +236,7 @@ argocd repo add https://github.com/dercioanselmo/GleamGoods-DevOps.git \
 
 ### Terraform CI/CD — AWS authentication
 
-Every `terraform-*.yaml` workflow authenticates to AWS via **GitHub OIDC** (no long-lived `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`), assuming `github-actions-terraform-role-gleamgoods-devops`. That role is defined in `01_remote_backend_s3bucket` — the one module applied manually — so it already exists before any other module's CI needs it. Full details in [SECRETS.md](SECRETS.md).
+Every `terraform-*.yaml` workflow authenticates to AWS via **GitHub OIDC** (no long-lived `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`), assuming `github-actions-terraform-role-gleamgoods-devops`. That role is defined in `01_remote_backend_s3bucket` — the one module applied manually — so it already exists before any other module's CI needs it.
 
 ### Detailed per section README:
 1.  [01_remote_backend_s3bucket](01_remote_backend_s3bucket/README.md)

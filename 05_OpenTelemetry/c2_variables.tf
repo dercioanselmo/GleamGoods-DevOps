@@ -49,9 +49,9 @@ variable "tags" {
 # --------------------------------------------------------
 
 # Explicit, pinned versions for every aws_eks_addon in this module. Nothing
-# here moves on its own - bump a value deliberately when you want that addon
+# here moves on its own - bump a value deliberately when we want that addon
 # to upgrade. Each *_default/*_latest data source pair (in the addon's own
-# .tf file) is kept purely for visibility (their outputs tell you when a
+# .tf file) is kept purely for visibility (their outputs tell we when a
 # newer version exists) and no longer drives what actually gets installed.
 # Defaults below match what's live as of the day this was pinned, so
 # applying this change alone is a no-op. Same pattern as

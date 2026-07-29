@@ -1,6 +1,6 @@
 # Secrets Management — Full Architecture
 
-This is the single, cross-cutting reference for how every secret in this project is created, stored, delivered to a running pod, and rotated.
+This is the reference for how every secret in this project is created, stored, delivered to a running pod, and rotated.
 
 It focuses on secrets managed in AWS Secrets Manager — how they are created, synchronized into Kubernetes, consumed by applications, and rotated over time. It also covers the Kubernetes-side delivery mechanism (Secrets Store CSI Driver, AWS Provider, EKS Pod Identity, and Reloader).
 
@@ -88,11 +88,11 @@ This is the mechanical path, step by step, for e.g. `catalog`:
 
     The resource also defines a `secretObjects` section, which tells the CSI Driver to mirror those extracted values into a native Kubernetes Secret named `catalog-db`. The values are stored under the keys `RETAIL_CATALOG_PERSISTENCE_USER` and `RETAIL_CATALOG_PERSISTENCE_PASSWORD`, allowing the application to consume them like any other Kubernetes Secret.
 
-2. **The pod's CSI volume mount** — The catalog Deployment/Rollout mounts a CSI volume (aws-secrets, driver secrets-store.csi.k8s.io) that references the SecretProviderClass, mounting it at /mnt/secrets-store.
+2. **The catalog Deployment/Rollout** mounts a CSI volume named aws-secrets (using the secrets-store.csi.k8s.io driver). This volume is linked to a SecretProviderClass and is mounted into the pod at /mnt/secrets-store.
 
     Although the application never reads files from `/mnt/secrets-store`, the volume mount is still required. Mounting the CSI volume causes Kubernetes to invoke the CSI driver's `NodePublishVolume` operation, which is when the Secrets Store CSI Driver authenticates with AWS (via EKS Pod Identity), fetches the secret from Secrets Manager, and processes the associated `SecretProviderClass`.
 
-    Because the `SecretProviderClass` includes a secretObjects section, the fetched values are also synchronized into the native Kubernetes Secret (catalog-db). The application consumes that Kubernetes Secret as environment variables rather than reading the mounted files directly.
+    Because the `SecretProviderClass` includes a secretObjects section, the fetched values are also synchronized into the native Kubernetes Secret (catalog-db). The application then consumes this Kubernetes Secret as environment variables instead of reading the files from the mounted volume.
 
     This is an intentional design choice: the CSI volume is present to activate the Secrets Store CSI Driver and keep the Kubernetes Secret synchronized with AWS Secrets Manager, while the application continues to use the familiar Kubernetes Secret interface.
 
@@ -106,7 +106,7 @@ This is the mechanical path, step by step, for e.g. `catalog`:
  - Because the SecretProviderClass defines a secretObjects section, the Secrets Store CSI Driver also synchronizes those values into a native Kubernetes Secret (`catalog-db`). This synchronization is enabled by syncSecret.enabled=true, allowing the application to consume the secret through the standard Kubernetes Secret interface, instead of reading the mounted files directly.
 
 
-4. **`envFrom: secretRef: catalog-db`** — The container specification imports all key/value pairs from the Kubernetes Secret object catalog-db as environment variables inside the container.
+4. **`envFrom --> secretRef: catalog-db`** — The container specification imports all key/value pairs from the Kubernetes Secret object catalog-db as environment variables inside the container.
 
     This injection happens only during container creation. Kubernetes reads the Secret value when the container starts and sets the corresponding environment variables in the container process. If the underlying Kubernetes Secret object is updated later, Kubernetes does not modify the environment variables of an already-running container. This is expected Kubernetes behavior, not a limitation or bug in this setup.
 
@@ -140,12 +140,14 @@ For secrets specifically:
 
  - A shared IAM trust policy (`c13-podidentity-assumerole.tf`, reused from `03_EKS_with_addons`) allows the EKS Pod Identity service principal: `pods.eks.amazonaws.com` to assume the IAM roles associated with Kubernetes service accounts.
  - Two separate, least-privilege IAM roles are created, one per service:
+
     **Catalog service**
   - IAM role: `retail-gleamgoods-catalog-getsecrets-role`
   - Associated with the catalog Kubernetes service account.
   - Attached policy: `retail-gleamgoods-catalog-db-secret-policy`
   - Permissions: `secretsmanager:GetSecretValue` and `secretsmanager:DescribeSecret`
   - Resource scope: `arn:...:secret:gleamgoods-catalog-db-secret*`
+  
     **Orders service**
   - IAM role: `retail-gleamgoods-orders-postgresql-getsecrets-role`
   - Associated with the orders Kubernetes service account.

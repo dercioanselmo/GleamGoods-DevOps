@@ -425,4 +425,4 @@ spec:
             - batch
           exporters:
             - prometheusremotewrite
-            #- debug  # Optional: enable if you want metrics dumped to logs too
+            #- debug  # Optional: enable if we want metrics dumped to logs too

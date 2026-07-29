@@ -4,7 +4,7 @@
 # Optional: pass namespace as first argument (defaults to "default")
 NAMESPACE="${1:-default}"
 
-echo "🔁 Restarting RetailStore deployments in namespace: $NAMESPACE"
+echo "🔁 Restarting gleamgoods deployments in namespace: $NAMESPACE"
 
 kubectl rollout restart deploy catalog  -n "$NAMESPACE"
 kubectl rollout restart deploy carts    -n "$NAMESPACE"

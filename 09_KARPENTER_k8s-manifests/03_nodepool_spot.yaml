@@ -34,7 +34,7 @@ spec:
           operator: In
           #values: ["micro", "small", "medium", "large"]
           values: ["micro", "small", "medium", "large", "xlarge"]  # Slightly larger is often fine + cheaper on Spot
-        # Must match the AZs where your EKS cluster has subnets configured
+        # Must match the AZs where the EKS cluster has subnets configured
         # Karpenter can only launch nodes in AZs with configured VPC subnets
         - key: topology.kubernetes.io/zone
           operator: In

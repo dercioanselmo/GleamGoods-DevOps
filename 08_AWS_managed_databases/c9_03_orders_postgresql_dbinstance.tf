@@ -10,8 +10,8 @@ resource "aws_db_instance" "orders_postgres" {
   vpc_security_group_ids  = [aws_security_group.rds_postgresql_sg.id]
 
   db_name                 = "ordersdb"
-  username                = local.retailstore_secret_json.username # Getting from c6_03 and AWS Secret Manager secret "glemgoods-db-secret"
-  password                = local.retailstore_secret_json.password # Getting from c6_03 and AWS Secret Manager secret "glemgoods-db-secret"
+  username                = local.gleamgoods_secret_json.username # Getting from c6_03 and AWS Secret Manager secret "glemgoods-db-secret"
+  password                = local.gleamgoods_secret_json.password # Getting from c6_03 and AWS Secret Manager secret "glemgoods-db-secret"
   port                    = 5432
 
   multi_az                = false

@@ -18,7 +18,7 @@
 #     "host": "mydb3.cipcmuog8z8q.us-east-1.rds.amazonaws.com",
 #     "port": 3306,
 #     "dbname": "catalogdb",
-#     "masterarn": "<data.aws_secretsmanager_secret.retailstore_secret.arn>"
+#     "masterarn": "<data.aws_secretsmanager_secret.gleamgoods_secret.arn>"
 #   }
 # (Orders: engine "postgres", host orders-postgres-db..., port 5432, dbname "ordersdb")
 

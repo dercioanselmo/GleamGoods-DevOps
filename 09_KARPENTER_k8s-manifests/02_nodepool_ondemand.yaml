@@ -9,7 +9,7 @@ spec:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
         name: default-ec2nodeclass
-      # No taints for now (you can add later)
+      # No taints for now (we can add later)
       taints: []
       startupTaints: []
       # Node selection logic
@@ -34,7 +34,7 @@ spec:
         - key: karpenter.k8s.aws/instance-size
           operator: In
           values: ["small", "medium", "large", "xlarge"]  # Caps at t3.medium (2 vCPU, 4GB RAM)
-        # Must match the AZs where your EKS cluster has subnets configured
+        # Must match the AZs where the EKS cluster has subnets configured
         # Karpenter can only launch nodes in AZs with configured VPC subnets
         - key: topology.kubernetes.io/zone
           operator: In

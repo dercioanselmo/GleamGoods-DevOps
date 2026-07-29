@@ -7,7 +7,7 @@
 # AWS Secrets Manager.
 #
 # Purpose:
-# - The IAM Role (aws_iam_role.retailstore_orders_csi_role) grants permission to 
+# - The IAM Role (aws_iam_role.gleamgoods_orders_csi_role) grants permission to 
 #   read the `glemgoods-db-secret-1` from AWS Secrets Manager.
 # - The Secrets Store CSI Driver uses this association to fetch the credentials 
 #   securely and mount them into the Orders Pod at runtime.
