@@ -1,4 +1,5 @@
 # Datasources
+# Availability zones not needs to hardcode them.
 data "aws_availability_zones" "available" {
   state = "available"
 }
