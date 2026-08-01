@@ -1,0 +1,54 @@
+# Scopes `kubectl exec`/`kubectl attach` (and pod log reads) to the default
+# namespace, as a separate concern from the Secret-read Role above.
+#
+# `pods/exec` can't practically be scoped to one specific pod by name via
+# resourceNames here, because Argo Rollouts generates a new pod name on
+# every deploy - namespace-level is the realistic limit for this resource
+# type in this project.
+#
+# WHY THIS MATTERS ALONGSIDE THE SECRETS ROLE: reading catalog-db/orders-db
+# from the Secrets API and reading the same credential out of a running
+# pod's process environment via exec are two DIFFERENT permissions in
+# Kubernetes RBAC (secrets:get vs pods/exec:create). Restricting only the
+# first one leaves the second as a full bypass - anyone who can exec into a
+# catalog/orders pod can just run `env | grep PASSWORD` regardless of any
+# Secret-level RBAC. See SECRETS.md for the fuller discussion of why both
+# halves need restricting together for this to mean anything.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pod-exec-limited
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+
+---
+# Example binding - filled in with the cluster's bootstrap creator
+# (arn:aws:iam::564956047797:user/machine-user, confirmed via
+# `aws eks describe-access-entry` - its Kubernetes username is the literal
+# IAM principal ARN, which is what RBAC `User` subjects match against for
+# IAM-authenticated identities). Still left commented out, and worth being
+# explicit about why binding it here doesn't actually add a restriction:
+# this identity already holds AmazonEKSClusterAdminPolicy (confirmed via
+# `aws eks list-associated-access-policies`), which bypasses RBAC entirely
+# - see the note at the top of this file. This binding only becomes
+# meaningful for an identity that does NOT already have cluster-admin.
+#
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: RoleBinding
+# metadata:
+#   name: pod-exec-limited-binding
+#   namespace: default
+# subjects:
+#   - kind: User
+#     name: arn:aws:iam::564956047797:user/machine-user
+#     apiGroup: rbac.authorization.k8s.io
+# roleRef:
+#   kind: Role
+#   name: pod-exec-limited
+#   apiGroup: rbac.authorization.k8s.io

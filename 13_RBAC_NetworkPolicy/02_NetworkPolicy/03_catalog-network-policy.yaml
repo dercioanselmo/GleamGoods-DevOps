@@ -1,0 +1,60 @@
+# Scoped to the catalog pods (app.kubernetes.io/name: catalog, matching the
+# selector label catalog's chart actually renders - see
+# GleamGoods/src/catalog/chart/templates/_helpers.tpl).
+#
+# Egress:
+# - MySQL (3306) to the VPC CIDR, not a specific RDS IP - RDS endpoint IPs
+#   aren't guaranteed stable across every AWS-side event, and the RDS
+#   instance's own security group (08_AWS_managed_databases) is already
+#   the primary AWS-side control here. This policy is a second, defense-
+#   in-depth layer, not a replacement for that SG.
+# - HTTPS (443) to 0.0.0.0/0, NOT scoped to the VPC CIDR. This project has
+#   no VPC interface endpoints (PrivateLink) for Secrets Manager/STS - so
+#   the CSI driver/ASCP's calls to fetch gleamgoods-catalog-db-secret leave
+#   the VPC via the NAT Gateway to AWS's public regional endpoints, not
+#   staying inside 10.0.0.0/16. NetworkPolicy has no concept of "AWS
+#   service" as a destination, only IP/CIDR, so this can't be tightened
+#   further than "port 443 to anywhere" without first adding VPC endpoints
+#   for those services.
+#
+# Ingress: only from pods carrying the "ui" selector label in this same
+# namespace, on the app's HTTP port. THIS IS A BEST-EFFORT ASSUMPTION based
+# on the documented architecture (ui aggregates calls to the other
+# services) - verify against the actual call graph before ever enabling
+# enforcement. If the AWS Load Balancer Controller ever routes directly to
+# catalog (not just to ui), this would also need to allow from the VPC
+# CIDR on this port, since ALB-to-pod traffic (IP target mode) doesn't
+# originate from a Kubernetes pod that NetworkPolicy can select by label.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: catalog-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: catalog
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ui
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/16
+      ports:
+        - protocol: TCP
+          port: 3306
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443

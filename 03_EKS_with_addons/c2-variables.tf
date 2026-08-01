@@ -188,11 +188,13 @@ variable "addon_versions" {
     ebs_csi             = string
     external_dns        = string
     metrics_server       = string
+    vpc_cni              = string
   })
   default = {
     pod_identity_agent = "v1.3.10-eksbuild.3"
     ebs_csi             = "v1.62.0-eksbuild.1"
     external_dns        = "v0.21.0-eksbuild.6"
     metrics_server       = "v0.8.1-eksbuild.11"
+    vpc_cni = "v1.22.3-eksbuild.1"
   }
 }

@@ -1,0 +1,54 @@
+# Scoped to the orders pods (app.kubernetes.io/name: orders).
+#
+# Egress:
+# - PostgreSQL (5432) to the VPC CIDR - same reasoning as catalog's MySQL
+#   rule: RDS's own security group is the primary control, this is
+#   defense-in-depth.
+# - HTTPS (443) to 0.0.0.0/0 - same caveat as catalog: no VPC endpoints
+#   for Secrets Manager/STS/SQS in this project, so AWS API traffic
+#   (Secrets Manager for gleamgoods-orders-db-secret, and SQS - orders
+#   uses SQS per the main README's service table) leaves the VPC via NAT
+#   Gateway rather than staying inside 10.0.0.0/16. Same note as catalog:
+#   worth adding VPC endpoints if you want this tightened later.
+#
+# Ingress: from "ui" (aggregation, same assumption as catalog) AND from
+# "checkout" specifically - checkout calls orders directly
+# (RETAIL_CHECKOUT_ENDPOINTS_ORDERS: http://orders in checkout's
+# configmap.yaml). Same verify-before-enforcing caveat as catalog applies
+# here too, including the ALB-direct-routing possibility.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: orders-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: orders
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ui
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: checkout
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/16
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443

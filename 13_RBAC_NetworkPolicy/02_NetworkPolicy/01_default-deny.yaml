@@ -1,0 +1,25 @@
+# Default-deny baseline for the `default` namespace. Once ANY NetworkPolicy
+# selects a pod, Kubernetes switches that pod from "allow everything" to
+# "allow only what's explicitly listed" for whichever direction (ingress/
+# egress) that policy covers. An empty podSelector matches every pod in the
+# namespace, so this is the "nothing is allowed unless a more specific
+# policy says otherwise" starting point every other policy in this folder
+# builds on.
+#
+# READ THIS FIRST: as of writing, this cluster's networking is plain AWS
+# VPC CNI (`aws-node` DaemonSet only) - there is no AWS Network Policy
+# Agent, Calico, or Cilium running. Kubernetes accepts NetworkPolicy
+# objects regardless (the API itself has no dependency on an enforcement
+# engine), but NOTHING in this folder actually restricts any traffic until
+# a policy engine is enabled. See this folder's README.md for what that
+# requires - it's a separate Terraform change, not included here.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: default
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress

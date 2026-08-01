@@ -1,0 +1,22 @@
+# Without this, the default-deny-all policy would break DNS resolution for
+# every pod in the namespace - CoreDNS lookups (UDP/TCP port 53) count as
+# "not explicitly allowed" the moment any egress policy selects a pod.
+# Every other policy in this folder depends on this one also being applied
+# alongside it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: default
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

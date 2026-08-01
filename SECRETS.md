@@ -157,7 +157,7 @@ For secrets specifically:
 
 The **master/superuser** credentials are the administrative account for each RDS instance (similar to the root user in MySQL or the postgres superuser in PostgreSQL). They are never used by the application. Catalog and Orders always connect using their own least-privilege accounts (catalog_app/orders_app and their clones), not the database administrator account.
 
-The only component that needs the master credentials is the AWS Secrets Manager rotation Lambda. During a rotation, the Lambda connects to the database as the administrator so it can run operations such as ALTER USER to reset the password of the inactive application account. Without administrative privileges, it would not be able to rotate another user's password.
+The only component that needs the master credentials is the AWS Secrets Manager rotation Lambda. During a rotation, the Lambda connects to the database as the administrator so it can run operations such as ALTER USER to reset the password of the inactive* application account. Without administrative privileges, it would not be able to rotate another user's password.
 
 Each rotation Lambda has its own IAM execution role, created automatically by the AWS Serverless Application Repository (SAR) CloudFormation stack that deploys the Lambda. That IAM role is granted permission to read only the master secret for the database it manages (its superuserSecretArn). For example, the Catalog rotation Lambda can read only the Catalog master secret, while the Orders rotation Lambda can read only the Orders master secret. Neither Lambda can access the other service's master credentials.
 
@@ -179,8 +179,8 @@ This project uses AWS's alternating users (multi-user) rotation strategy:
 | Orders (PostgreSQL) | `orders_app` | `orders_app_clone` (auto-created by the Lambda via role-grant cloning) |
 
 On each rotation cycle, the Lambda:
-1. Identifies which of the two users is currently **inactive** (not referenced by the secret's `AWSCURRENT` version).
-2. Generates a new random password and resets **only that inactive user's** password via `ALTER USER`, authenticating as the master/superuser account (`superuserSecretArn`).
+1. Identifies which of the two users is currently **inactive\*** (not referenced by the secret's `AWSCURRENT` version).
+2. Generates a new random password and resets **only that inactive\* user's** password via `ALTER USER`, authenticating as the master/superuser account (`superuserSecretArn`).
 3. Tests the new credential actually works (`testSecret` step).
 4. Flips the secret's `AWSCURRENT` label to the newly-reset user (`finishSecret` step).
 
@@ -268,3 +268,17 @@ This happened once (the `excludePunctuation` incident above) and is worth having
 | `SecretProviderClass` / K8s Secret mapping (per service) | App repo: `src/catalog/chart/templates/secretproviderclass.yaml`, `src/orders/chart/templates/secretproviderclass.yaml` |
 | Reloader annotation + `envFrom` wiring | App repo: `src/catalog/chart/templates/deployment.yaml`, `src/orders/chart/templates/rollout.yaml` |
 | GitHub Actions → AWS auth for all Terraform CI (OIDC, no static keys) | `01_remote_backend_s3bucket/c5-github-actions-terraform-role.tf` — the one module applied manually, so this role already exists before any other module's CI runs; consumed by every `.github/workflows/terraform-*.yaml` |
+
+---
+
+**Note \*** — what "inactive" means here: it doesn't mean the database user is disabled or locked — it's still a fully valid MySQL/Postgres user with real grants. It means **not the user that Secrets Manager is currently handing out to new or refreshing consumers.** At any moment, exactly one of the two users (e.g. `catalog_app` / `catalog_app_clone`) is "active" (referenced by the secret's `AWSCURRENT` version — the one any new/restarting pod will read), and the other one is "inactive" (exists in the database, has a password, but nothing is currently being told to use it).
+
+Concrete timeline to make it click:
+
+1. **Before rotation ever runs:** only `catalog_app` exists. Every pod uses it. `AWSCURRENT` → `catalog_app`. There's no clone yet, so nothing is "inactive" — there's only one user.
+2. **First rotation fires.** The Lambda's `createSecret` step sees no clone exists yet, so it creates `catalog_app_clone` (cloning `catalog_app`'s grants via `SHOW GRANTS`) and generates a new random password for it. At this instant, `catalog_app_clone` is the **inactive** one — it exists and has a valid password, but `AWSCURRENT` still points to `catalog_app`, so no pod has been told about it yet.
+3. `setSecret` applies that password to `catalog_app_clone` in the actual database; `testSecret` connects as `catalog_app_clone` to confirm it genuinely works, using the master account for the `ALTER USER`.
+4. `finishSecret` flips `AWSCURRENT` to `catalog_app_clone`. From this moment, any pod that starts or restarts gets `catalog_app_clone`'s credentials. **Now `catalog_app` becomes the inactive one** — untouched, its old password still valid, and any already-running pod still holding `catalog_app`'s credentials in its environment keeps working fine, because nothing reset it.
+5. **Next rotation cycle** (30 days later, or triggered manually): the Lambda checks `AWSCURRENT`, sees it's `catalog_app_clone`, so it identifies `catalog_app` as the currently-inactive one this time — and resets *that* one's password instead. `AWSCURRENT` flips back to `catalog_app`, and now `catalog_app_clone` becomes inactive.
+
+They just keep trading places every cycle — that's the "alternating" in alternating-users. The safety property depends entirely on this: **the Lambda only ever resets the password of whichever user is currently inactive, never the one `AWSCURRENT` points to** — so a pod's cached credential (from whenever it last started) is guaranteed to remain the still-valid "other" user until it happens to be that user's turn to be reset on some future cycle.
