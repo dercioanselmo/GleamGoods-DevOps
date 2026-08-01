@@ -1,8 +1,6 @@
 # 13 — RBAC & NetworkPolicy
 
-Plain Kubernetes manifests, same pattern as `09_KARPENTER_k8s-manifests/` and `12_Open_Telemetry/` — **no Terraform, no CI workflow, applied by hand** via `kubectl apply -f`. Nothing in this folder has been applied yet.
-
-Grew out of the Secrets architecture discussion in [`SECRETS.md`](../SECRETS.md): after reverting the `catalog`/`orders` DB-credential delivery model back to the K8s-Secret + Reloader approach, the follow-up question was how to reduce that Secret's exposure without giving up the automatic rotation-pickup. The answer landed on RBAC (who can read the Secret / exec into the pod) plus NetworkPolicy (what the pod can talk to), rather than avoiding a K8s Secret object entirely.
+Kubernetes-level access control for the cluster: `RBAC` scoping who can read specific Secrets or exec into pods, and `NetworkPolicy` scoping what each service's pods can talk to. 
 
 ## 01_RBAC/
 

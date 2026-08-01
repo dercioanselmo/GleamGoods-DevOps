@@ -20,56 +20,7 @@ It focuses on secrets managed in AWS Secrets Manager — how they are created, s
 
 ## 2. End-to-end architecture
 
-```mermaid
-flowchart TB
-    subgraph AWS["AWS Secrets Manager"]
-        CATSEC["gleamgoods-catalog-db-secret<br/>(catalog_app / catalog_app_clone)"]
-        ORDSEC["gleamgoods-orders-db-secret<br/>(orders_app / orders_app_clone)"]
-        CATMASTER["gleamgoods-catalog-db-secret-master"]
-        ORDMASTER["gleamgoods-orders-db-secret-master"]
-    end
-
-    subgraph Lambdas["Rotation Lambdas (VPC-attached)"]
-        CATLAMBDA["retail-gleamgoods-catalog-db-rotation<br/>(SAR: SecretsManagerRDSMySQLRotationMultiUser)"]
-        ORDLAMBDA["retail-gleamgoods-orders-db-rotation<br/>(SAR: SecretsManagerRDSPostgreSQLRotationMultiUser)"]
-    end
-
-    subgraph RDS["RDS"]
-        MYSQL[("MySQL: mydb3<br/>catalog_app / catalog_app_clone users")]
-        PG[("PostgreSQL: orders-postgres-db<br/>orders_app / orders_app_clone users")]
-    end
-
-    subgraph Cluster["EKS Cluster"]
-        CSI["Secrets Store CSI Driver<br/>+ ASCP provider<br/>(enableSecretRotation=true, poll=2m)"]
-        SPCCAT["SecretProviderClass: catalog-secrets"]
-        SPCORD["SecretProviderClass: orders-secrets"]
-        K8SSECCAT["K8s Secret: catalog-db"]
-        K8SSECORD["K8s Secret: orders-db"]
-        RELOADER["Stakater Reloader"]
-        CATPOD["catalog pod(s)<br/>envFrom: catalog-db"]
-        ORDPOD["orders pod(s)<br/>envFrom: orders-db"]
-    end
-
-    CATSEC -- "rotate-secret (30d or manual)" --> CATLAMBDA
-    ORDSEC -- "rotate-secret (30d or manual)" --> ORDLAMBDA
-    CATMASTER -- "superuserSecretArn (ALTER USER)" --> CATLAMBDA
-    ORDMASTER -- "superuserSecretArn (ALTER USER)" --> ORDLAMBDA
-    CATLAMBDA -- "ALTER USER catalog_app_clone" --> MYSQL
-    ORDLAMBDA -- "ALTER USER orders_app_clone" --> PG
-
-    CATSEC -. "polled every 2m" .-> CSI
-    ORDSEC -. "polled every 2m" .-> CSI
-    CSI --> SPCCAT --> K8SSECCAT
-    CSI --> SPCORD --> K8SSECORD
-    K8SSECCAT -- "envFrom (set once at pod start)" --> CATPOD
-    K8SSECORD -- "envFrom (set once at pod start)" --> ORDPOD
-    K8SSECCAT -. "data changed" .-> RELOADER
-    K8SSECORD -. "data changed" .-> RELOADER
-    RELOADER -- "rolling restart" --> CATPOD
-    RELOADER -- "rolling restart" --> ORDPOD
-    CATPOD -- "DB connection" --> MYSQL
-    ORDPOD -- "DB connection" --> PG
-```
+![05_Secrets_Management.png](images/05_Secrets_Management.png)
 
 Two independent processes are happening simultaneously, and it's important to keep them conceptually separate:
 
@@ -214,7 +165,8 @@ Both rotation Lambdas are configured with excludePunctuation = "true". This ensu
 aws secretsmanager rotate-secret --secret-id gleamgoods-catalog-db-secret --region us-east-1
 aws secretsmanager rotate-secret --secret-id gleamgoods-orders-db-secret --region us-east-1
 
-# Watch which version is AWSCURRENT vs AWSPENDING
+# Watch which version is AWSCURRENT vs AWSPENDING (and, once the rotation
+# completes, AWSPREVIOUS - the version AWSCURRENT just moved off of)
 aws secretsmanager describe-secret --secret-id gleamgoods-catalog-db-secret --region us-east-1 --query VersionIdsToStages
 
 # Watch the active username flip (catalog_app <-> catalog_app_clone)
@@ -255,6 +207,7 @@ This happened once (the `excludePunctuation` incident above) and is worth having
 
 | Concern | File(s) |
 |---|---|
+| RDS instances (Catalog MySQL, Orders PostgreSQL) — the actual databases these secrets authenticate against | `08_AWS_managed_databases/c6_04_catalog_rds_mysql_dbinstance.tf`, `c9_03_orders_postgresql_dbinstance.tf` |
 | App secrets (containers only, value set manually) | `08_AWS_managed_databases/c10_01_rotation_secrets.tf` |
 | Master/superuser secrets | Same file |
 | Rotation Lambda networking (SGs) | `08_AWS_managed_databases/c10_02_rotation_lambda_networking.tf`, inline blocks in `c6_01`/`c9_01` |
@@ -271,14 +224,18 @@ This happened once (the `excludePunctuation` incident above) and is worth having
 
 ---
 
-**Note \*** — what "inactive" means here: it doesn't mean the database user is disabled or locked — it's still a fully valid MySQL/Postgres user with real grants. It means **not the user that Secrets Manager is currently handing out to new or refreshing consumers.** At any moment, exactly one of the two users (e.g. `catalog_app` / `catalog_app_clone`) is "active" (referenced by the secret's `AWSCURRENT` version — the one any new/restarting pod will read), and the other one is "inactive" (exists in the database, has a password, but nothing is currently being told to use it).
+
+
+
+## 8. **Note \*** 
+— What "inactive" means here: it doesn't mean the database user is disabled or locked — it's still a fully valid MySQL/Postgres user with real grants. It means **not the user that Secrets Manager is currently handing out to new or refreshing consumers.** At any moment, exactly one of the two users (e.g. `catalog_app` / `catalog_app_clone`) is "active" (referenced by the secret's `AWSCURRENT` version — the one any new/restarting pod will read), and the other one is "inactive" (exists in the database, has a password, but nothing is currently being told to use it).
 
 Concrete timeline to make it click:
 
 1. **Before rotation ever runs:** only `catalog_app` exists. Every pod uses it. `AWSCURRENT` → `catalog_app`. There's no clone yet, so nothing is "inactive" — there's only one user.
-2. **First rotation fires.** The Lambda's `createSecret` step sees no clone exists yet, so it creates `catalog_app_clone` (cloning `catalog_app`'s grants via `SHOW GRANTS`) and generates a new random password for it. At this instant, `catalog_app_clone` is the **inactive** one — it exists and has a valid password, but `AWSCURRENT` still points to `catalog_app`, so no pod has been told about it yet.
-3. `setSecret` applies that password to `catalog_app_clone` in the actual database; `testSecret` connects as `catalog_app_clone` to confirm it genuinely works, using the master account for the `ALTER USER`.
-4. `finishSecret` flips `AWSCURRENT` to `catalog_app_clone`. From this moment, any pod that starts or restarts gets `catalog_app_clone`'s credentials. **Now `catalog_app` becomes the inactive one** — untouched, its old password still valid, and any already-running pod still holding `catalog_app`'s credentials in its environment keeps working fine, because nothing reset it.
+2. **First rotation fires.** The Lambda's `createSecret` step touches only Secrets Manager, never the database: it decides on the clone username (`catalog_app_clone`), generates a new random password via `GetRandomPassword`, and stores that as a new secret version labeled `AWSPENDING`. At this instant, that version already exists and is retrievable in Secrets Manager (`get-secret-value --version-stage AWSPENDING`) — but nothing in the actual database has changed yet, and `AWSCURRENT` still points to `catalog_app`, so no pod has been told about any of this.
+3. `setSecret` is where the database is actually touched, and on this first-ever rotation it does two things in one step: connects as master and runs `CREATE USER` for `catalog_app_clone`, cloning `catalog_app`'s grants via `SHOW GRANTS`, *and* sets its password to the value staged in step 2. (On every *subsequent* rotation, the clone user already exists from a prior cycle, so this step skips straight to resetting its password via `ALTER USER`.) `testSecret` then connects as `catalog_app_clone` with that password to confirm it genuinely works. Only after this step does `catalog_app_clone` actually become the **inactive** one — it now exists in the database with a valid, verified password, but `AWSCURRENT` still points to `catalog_app`.
+4. `finishSecret` flips `AWSCURRENT` to `catalog_app_clone`. From this moment, any pod that starts or restarts gets `catalog_app_clone`'s credentials. **Now `catalog_app` becomes the inactive one** — untouched, its old password still valid, and any already-running pod still holding `catalog_app`'s credentials in its environment keeps working fine, because nothing reset it. The version that *was* `AWSCURRENT` (still referencing `catalog_app`) is automatically relabeled `AWSPREVIOUS` by Secrets Manager as part of this same step — not something the Lambda does separately. Unlike a plain single-user rotation, where `AWSPREVIOUS` goes stale almost immediately (the old password gets overwritten in that same cycle), here it stays genuinely valid and connectable right up until `catalog_app`'s *next* turn to be reset.
 5. **Next rotation cycle** (30 days later, or triggered manually): the Lambda checks `AWSCURRENT`, sees it's `catalog_app_clone`, so it identifies `catalog_app` as the currently-inactive one this time — and resets *that* one's password instead. `AWSCURRENT` flips back to `catalog_app`, and now `catalog_app_clone` becomes inactive.
 
 They just keep trading places every cycle — that's the "alternating" in alternating-users. The safety property depends entirely on this: **the Lambda only ever resets the password of whichever user is currently inactive, never the one `AWSCURRENT` points to** — so a pod's cached credential (from whenever it last started) is guaranteed to remain the still-valid "other" user until it happens to be that user's turn to be reset on some future cycle.
