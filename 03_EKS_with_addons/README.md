@@ -1,5 +1,7 @@
 # 03 — EKS with Addons
 
+![02_EKS_Cluster.drawio.png](images/02_EKS_Cluster.drawio.png)
+
 Creates the Amazon EKS cluster, its initial managed (static) node group, and all cluster-wide controllers and add-ons required by the platform. Other modules rely on this module providing the core Kubernetes foundation, including:
 
  - EKS Pod Identity
@@ -85,14 +87,66 @@ variable "addon_versions" {
 
 **LBC's IAM policy is fetched live from GitHub on every plan** (`data "http" "lbc_iam_policy"`, pulling `kubernetes-sigs/aws-load-balancer-controller`'s `main` branch `iam_policy.json` directly).
 
-### Secrets Store CSI Driver — rotation settings
+### Secrets Store CSI Driver — Handling Secrets on EKS using AWS Secrets Manager with rotation and zero downtime
+
+Assuming IAM Roles and Pod Identity Association are already set in the cluster.
+
+```hcl
+1 - Delivery
+  1.1 - Create the AWS Secrets Manager record with 2 db secrets (Root and app user)
+  1.2 - Create the RDS MySQL with Credentials using the secrets created above
+  1.3 - Helm install and config the necessary Add-on/Plugin:
+     1.3.1 - Secret Store CSI Driver with the following relevant config:
+           - syncSecret.enabled=true
+           - enableSecretRotation=true
+           - rotationPollInterval=2m
+     1.3.2 - AWS Secrets & Configuration Provider (ASCP)
+           - secrets-store-csi-driver.install=false
+     1.3.3 - Stakater Reloader with the following relevant config:
+           - reloader.isArgoRollouts=true - When needs to be compatible with argoproj.io Rollout objects
+  1.4 - Create a SecretProviderClass resource with secretObjects section.
+  1.5 - Create application K8s manifests:
+      - deployment/rollout with CSI secrets volume and envFrom --> secretRef
+      - serviceAccount
+  1.6 - In the pod creation event, Secret Store CSI Driver Collects the instructions from SecretProviderClass and the pod, 
+        and with the help of ASCP, fetches the secret from Secrets Manager, passes to pod to create the ephemeral volume mount 
+        with the secret and the mirrored secrets object.
+  1.7 - Application is running using the secret at AWS Secret Manager
+
+2 - Rotation with Zero Downtime
+  2.1 - Create Lambda function using the AWS Serverless Application Repository (SAR): SecretsManagerRDSMySQLRotationMultiUser.
+  2.2 - Enable and schedule rotation at AWS Secret Manager
+  2.3 - The generated lambda function executes the following actions using the SuperUser account :
+      - createSecret - Creates a new user name with clone suffix, generates a new random password and stores at AWS Secret 
+        Manager app user record and labels it as AWSPENDING
+      - setSecret - In the first rotation: Creates a new user in the DB with the name and password just created above, and 
+        grants permissions from the original DB app account
+      - testSecret - Test connection  with the new cloned user and password. At this stage the new account is inactive however
+        ready to assume AWSCURRENT.
+      - finishSecret - Flips AWSCURRENT to the new cloned account. From this moment, any pod that starts or restarts, will 
+        assume this new db account,
+      - The old original account is still working for the pods that have not restarted yet, and is marked as AWSPREVIOUS.
+      - In the next rotation, the lambda function recognizes it already have the 2 db accounts and performs the new password 
+        generation, update and flip the accounts in the same way.
+       
+  2.4 - Secret Store CSI Driver, with the help of ASCP, detect secret updated, retrieves and update the Kubernetes secret 
+        object.
+  2.5 - Stakater Reloader detects changes on secrets object and triggers a rolling restart of the pods
+  2.6 - Finishing this way the zero downtime secrets rotation
+```
+![03_Secrets_Management.png](images/03_Secrets_Management.png)
 
 `c16-01` sets three non-default Helm values worth knowing about, since they're load-bearing for the DB-secret rotation set up in `08_AWS_managed_databases`:
 
 - `tokenRequests[0].audience = pods.eks.amazonaws.com` — without this, pods fail to mount CSI secrets at all under Pod Identity.
 - `enableSecretRotation = true` + `rotationPollInterval = 2m` — **not on by default.** Without these, `syncSecret.enabled` alone only re-reads the source secret when a pod (re)mounts the volume — a rotated Secrets Manager value would never reach the synced Kubernetes `Secret` (or trigger Reloader) until every consuming pod happened to restart on its own for an unrelated reason.
 
-### Reloader
+### External DNS and Load Balancer Controller
+External DNS and Load Balancer Controller enables the ingress with the correct annotations to automatically create, update and delete the DNS Records and ALB.
+
+![04_ExternalDNS_LBController.png](images/04_ExternalDNS_LBController.png)
+
+## Reloader
 
 Reloader watches Kubernetes `Secret` and `ConfigMap` objects. When the data in a referenced Secret or ConfigMap changes, it automatically triggers a rolling restart of any workload annotated with `reloader.stakater.com/auto: true`.
 

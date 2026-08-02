@@ -69,3 +69,9 @@ tags = {
 ## State
 
 Remote, in the bucket from `01_remote_backend_s3bucket`, key `GleamGoods/vpc/terraform.tfstate`.
+
+
+
+
+### Post Apply - VPC Resource Map
+![03_VPC_Resource_Map.png](images/03_VPC_Resource_Map.png)

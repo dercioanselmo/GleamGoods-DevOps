@@ -221,7 +221,7 @@ Each microservice includes Helm chart with:
 - [x] 45 Enable rotation
 - [x] 46 Lambda Functions
 - [x] 47 Reloader
-
+- [x] 48 RBAC and Network Policies
 
 
 ### Notes
