@@ -244,3 +244,4 @@ Every `terraform-*.yaml` workflow authenticates to AWS via **GitHub OIDC** (no l
 3.  [03_EKS_with_addons](03_EKS_with_addons/README.md)
 4.  [04_EKS_Karpenter](04_EKS_Karpenter/README.md)
 5.  [05_OpenTelemetry](05_OpenTelemetry/README.md)
+6.  [06_Amazon_ECR](06_Amazon_ECR/README.md)

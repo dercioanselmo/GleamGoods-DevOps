@@ -1,20 +1,4 @@
 # =============================================
-# ECR Repositories
-# =============================================
-resource "aws_ecr_repository" "ecr" {
-  for_each = toset(var.ecr_repositories)
-
-  name                 = each.value
-  image_tag_mutability = "MUTABLE"
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  tags = var.tags
-}
-
-# =============================================
 # GitHub OIDC Provider
 # =============================================
 resource "aws_iam_openid_connect_provider" "github" {
