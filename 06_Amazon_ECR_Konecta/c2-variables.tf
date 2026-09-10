@@ -4,10 +4,10 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-variable "github_repo" {
-  description = "GitHub repository (owner/repo)"
-  type        = string
-  default     = "dercioanselmo/GleamGoods"
+variable "github_repos" {
+  description = "List of GitHub repositories (owner/repo) allowed to assume the role"
+  type        = list(string)
+  default     = ["dercioanselmo/GleamGoods"]
 }
 
 variable "role_name" {
@@ -25,7 +25,7 @@ variable "project_name" {
 variable "tags" {
   description = "Global tags to apply to all resources"
   type        = map(string)
-  default     = {
+  default = {
     Terraform = "true"
   }
 }
@@ -35,10 +35,12 @@ variable "ecr_repositories" {
   description = "List of ECR repositories to create"
   type        = list(string)
   default = [
-    "gleamgoods/ui",
-    "gleamgoods/cart",
-    "gleamgoods/catalog",
-    "gleamgoods/checkout",
-    "gleamgoods/orders"
+    "konecta/konecta-frontend",
+    "konecta/konecta-security-service",
+    "konecta/konecta-stores-and-stock-service",
+    "konecta/konecta-cart-service",
+    "konecta/konecta-checkout-service",
+    "konecta/konecta-order-service",
+    "konecta/konecta-courier-service"
   ]
 }

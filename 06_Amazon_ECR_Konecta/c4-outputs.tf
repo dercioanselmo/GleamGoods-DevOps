@@ -1,14 +1,14 @@
 output "ecr_repository_urls" {
   description = "Map of ECR Repository URLs"
   value = {
-    for k, v in aws_ecr_repository.ecr : k => v.repository_url
+    for k, v in aws_ecr_repository.ecr_konecta : k => v.repository_url
   }
 }
 
 output "ecr_repository_arns" {
   description = "Map of ECR Repository ARNs"
   value = {
-    for k, v in aws_ecr_repository.ecr : k => v.arn
+    for k, v in aws_ecr_repository.ecr_konecta : k => v.arn
   }
 }
 
