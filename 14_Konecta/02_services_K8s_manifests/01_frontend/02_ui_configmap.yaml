@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend
+  namespace: konecta
+data:
+  KONECTA_FRONTEND_ENDPOINTS_SECURITY: http://konecta_security
+  KONECTA_FRONTEND_ENDPOINTS_STORE_STOCK: http://konecta_store_stock
+  KONECTA_FRONTEND_ENDPOINTS_CART: http://konecta_cart
+  KONECTA_FRONTEND_ENDPOINTS_CHECKOUT: http://konecta_checkout
+  KONECTA_FRONTEND_ENDPOINTS_ORDERS: http://konecta_orders
+  KONECTA_FRONTEND_ENDPOINTS_COUREIER: http://konecta_courier
