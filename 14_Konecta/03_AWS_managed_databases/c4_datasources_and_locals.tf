@@ -1,0 +1,20 @@
+# Data Source: AWS Account Info
+data "aws_caller_identity" "current" {}
+
+# Data Source: AWS Region
+data "aws_region" "current" {}
+
+# --------------------------------------------------------------------
+# Local values used throughout this configuration
+# Helps enforce naming consistency and reduce duplication
+# --------------------------------------------------------------------
+locals {
+  # Business division or team name (from variable)
+  owners = var.business_division # Example: "retail"
+
+  # Environment name such as dev, staging, prod (from variable)
+  environment = var.project_name # Example: "konecta"
+
+  # Standardized naming prefix: "<division>-<project>"
+  name = "${local.owners}-${local.environment}" # Example: "retail-konecta"
+}
