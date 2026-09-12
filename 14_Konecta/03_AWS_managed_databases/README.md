@@ -13,21 +13,21 @@ Consumes the **same shared VPC and EKS cluster** as the rest of GleamGoods, via 
 | Networking | 1× `aws_security_group` (`c7_01`) | Shared by all 5 DBs. Allows port 5432 from the EKS cluster security group only. |
 | Networking | 1× `aws_db_subnet_group` (`c7_02`) | Shared by all 5 DBs, across the VPC's private subnets. |
 | Databases | 5× `aws_db_instance` (`c7_03`–`c7_07`) | `konecta-cart`, `konecta-checkout`, `konecta-security`, `konecta-courier`, `konecta-store-stock`. Postgres 17.6, `db.t4g.micro`, 20→100 GiB autoscaling storage, single-AZ, not publicly accessible, `skip_final_snapshot = true`. |
-| Secret | `data.aws_secretsmanager_secret` + version (`c6_01`) | Reads the **one** pre-existing `konecta-db-secret` — used as master username/password for all 5 databases. |
+| Secret | `random_password` + `aws_secretsmanager_secret` + version (`c6_01`) | Creates the **one** `konecta-db-secret` — Terraform generates the password and sets the value, no manual step. Used as master username/password for all 5 databases. |
 | IAM | 1× `aws_iam_role` (`c8_01`) + 1× `aws_iam_policy` (`c8_02`) | One role/policy shared by every Konecta service, scoped to `GetSecretValue`/`DescribeSecret` on `konecta-db-secret*` only. |
 | Pod Identity | 5× `aws_eks_pod_identity_association` (`c8_03`–`c8_07`) | One per service account (`cart`, `checkout`, `security`, `courier`, `store-stock`) in the `konecta` namespace, all bound to the one shared role above. |
 
-## Prerequisite: the secret must already exist
+## The secret is created by Terraform — no manual step
 
-Terraform only **reads** `konecta-db-secret` (via `data` sources in `c6_01`) — it never creates or sets its value, the same pattern GleamGoods uses for `gleamgoods-db-secret`. Before running `apply` for the first time, create it manually, e.g.:
+Unlike GleamGoods' `gleamgoods-db-secret` (created out-of-band, only ever read via a `data` source), `konecta-db-secret` is fully managed here (`c6_01`):
 
-```bash
-aws secretsmanager create-secret \
-  --name konecta-db-secret \
-  --secret-string '{"username":"konecta_admin","password":"<a-strong-password>"}'
-```
+- `random_password.konecta_db_password` generates a 32-character, alphanumeric-only password (no special characters — punctuation in a generated password has broken DSN/connection-string parsing in this project before, see `08_AWS_managed_databases`' rotation-Lambda gotcha).
+- `aws_secretsmanager_secret.konecta_secret` creates the secret container.
+- `aws_secretsmanager_secret_version.konecta_secret_value` sets its value to `{"username": "<konecta_db_username>", "password": "<generated>"}`.
 
-If the secret doesn't exist yet, `terraform plan`/`apply` will fail at the `data.aws_secretsmanager_secret.konecta_secret` lookup.
+Just run `terraform apply` — nothing to create by hand first. The username defaults to `konecta_admin` (`var.konecta_db_username`); override it in `terraform.tfvars` if you need something else.
+
+To see the generated password: `terraform output` doesn't expose it (it's not declared as an output, since that would print it to state-inspection commands unnecessarily) — pull it from Secrets Manager instead: `aws secretsmanager get-secret-value --secret-id konecta-db-secret`.
 
 ## Database naming
 

@@ -12,7 +12,7 @@ Consumes `02_VPC` and `03_EKS_with_addons` via `data.terraform_remote_state` —
 
 08's rotation infrastructure exists because GleamGoods needed zero-downtime credential rotation with blast-radius isolation between Catalog and Orders. Konecta's explicit requirement was: **one secret (`konecta-db-secret`) for all 5 databases and all 5 services.** That single requirement cascades into every other simplification here:
 
-- One `data "aws_secretsmanager_secret"`/`data "aws_secretsmanager_secret_version"` pair (`c6_01`), not five, not per-service master-secret copies.
+- One Terraform-created secret (`c6_01` — `random_password` + `aws_secretsmanager_secret` + `aws_secretsmanager_secret_version`, no manual `create-secret` step required), not five, not per-service master-secret copies.
 - One shared `aws_iam_role` + one `aws_iam_policy` (`c8_01`/`c8_02`), not one role per service — since every service needs access to the exact same secret, a shared role/policy is equivalent in practice to five identical ones, so don't create five.
 - No rotation Lambda, no SAR stack, no `aws_secretsmanager_secret_rotation`, no host-qualified master-secret copies. All of that exists in `08` purely to support *safe, per-service* rotation — with one shared static secret, none of it applies.
 - One shared security group and one shared DB subnet group across all 5 `aws_db_instance` resources, since they all live in the same VPC/subnets and accept the same ingress rule (5432 from the EKS cluster SG) — no per-service SG needed like `08`'s per-Lambda SGs.
@@ -38,15 +38,18 @@ All five `aws_db_instance` resources (`c7_03`–`c7_07`) are identical in shape,
 - **Namespace is `konecta`, not `default`.** This is the one place this module's Pod Identity associations diverge structurally from `08`'s (`08` uses `namespace = "default"` because all GleamGoods workloads run there) — Konecta has its own namespace (`14_Konecta/01_namespace.yaml`), so every `aws_eks_pod_identity_association` here uses `namespace = "konecta"`.
 - Service account names (`cart`, `checkout`, `security`, `courier`, `store-stock`) were chosen to match the existing frontend convention in `14_Konecta/02_services_K8s_manifests/01_frontend/01_ui_service_account.yaml` (short name, no `-service` suffix, even though the ECR repos and app repos are named e.g. `konecta-cart-service`). **This is inferred, not confirmed against each service's actual Helm chart/deployment manifest** — if those charts don't exist yet or land with different service account names, these 5 `aws_eks_pod_identity_association` resources' `service_account` fields need to be updated to match before `apply` will actually grant the right pods access. Check this the same way `08`'s context doc flags Cart's DynamoDB service account name (`carts`, plural) as a place where guessing from folder naming got it wrong once already — verify against the real chart, don't assume.
 
-## Secret shape
+## Secret shape — created by Terraform, not a `data` source
 
-`konecta-db-secret` must be created manually (out-of-band, same as `gleamgoods-db-secret`) before first `apply`, with JSON shape:
+This is the one point where this module diverges from `08`'s pattern on purpose, per an explicit later requirement: **the user does not want to create secrets manually.** `08`'s `gleamgoods-db-secret` (and this module's original first draft) only ever *read* a pre-existing secret via `data "aws_secretsmanager_secret"`/`data "aws_secretsmanager_secret_version"`. Here (`c6_01`), the secret is fully Terraform-owned:
 
-```json
-{ "username": "konecta_admin", "password": "<password>" }
-```
+- `random_password.konecta_db_password` — 32 chars, `special = false` (alphanumeric only). Deliberately avoiding punctuation here, same rationale as `08`'s rotation-Lambda `excludePunctuation = "true"` parameter: a punctuation character in a generated DB password has broken DSN/connection-string parsing in this project before. If asked to make the password "stronger" by allowing symbols, push back or at minimum flag this history first.
+- `aws_secretsmanager_secret.konecta_secret` — the container.
+- `aws_secretsmanager_secret_version.konecta_secret_value` — sets `secret_string` to `{"username": var.konecta_db_username, "password": random_password.konecta_db_password.result}`. `konecta_db_username` defaults to `"konecta_admin"` (`c2_variables.tf`) — a judgment call, not user-specified; fine to rename but it'll force a new password/DB user cycle since it's baked into the same secret version.
+- `locals.konecta_secret_json` is now `jsondecode(aws_secretsmanager_secret_version.konecta_secret_value.secret_string)` (a resource attribute) instead of `jsondecode(data.aws_secretsmanager_secret_version.....secret_string)` (a data source) — every downstream `aws_db_instance` in `c7_03`–`c7_07` reads `local.konecta_secret_json.username`/`.password` exactly as before, so this swap was a same-shape, zero-diff change for every file that depends on it.
 
-No `host`/`engine`/`port`/`dbname`/`masterarn` fields needed — unlike `08`'s master secrets, this one is never used by a rotation Lambda, only read as `aws_db_instance` master credentials via Terraform `data` sources (`c6_01`). Terraform will fail at plan time (`data.aws_secretsmanager_secret.konecta_secret`) if the secret doesn't exist yet.
+No `host`/`engine`/`port`/`dbname`/`masterarn` fields in the JSON — unlike `08`'s master secrets, this one is never consumed by a rotation Lambda's `setSecret` step, only read as `aws_db_instance` master credentials.
+
+**Deletion/recreation note**: since Terraform now owns the secret's value, `terraform destroy` followed by `apply` regenerates a *new* random password each time (no `lifecycle { ignore_changes }` on `random_password` or the secret version) — this is intentional per-environment behavior, not a bug, but means the password isn't stable across a destroy/recreate cycle the way a manually-set one would be. If that stability is ever needed, add a `keepers` block to `random_password` or move to `ignore_changes`, but don't do that unprompted since it changes how rotation/recreation behaves.
 
 ## Repo-wide conventions this module follows
 

@@ -41,6 +41,12 @@ variable "konecta_db_secret_name" {
   default     = "konecta-db-secret"
 }
 
+variable "konecta_db_username" {
+  description = "Master username stored in konecta-db-secret and used by every Konecta RDS PostgreSQL instance"
+  type        = string
+  default     = "konecta_admin"
+}
+
 # Tags applied to all resources created by this configuration
 variable "tags" {
   description = "Tags to apply to resources"
