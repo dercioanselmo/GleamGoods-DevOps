@@ -1,0 +1,28 @@
+{{- if .Values.configMap.create -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "frontend.configMapName" . }}
+data:
+  {{- if .Values.app.publicUrl }}
+  NEXT_PUBLIC_APP_URL: {{ .Values.app.publicUrl }}
+  {{- end }}
+  {{- if .Values.app.endpoints.auth }}
+  AUTH_API_BASE_URL: {{ .Values.app.endpoints.auth }}
+  {{- end }}
+  {{- if .Values.app.endpoints.stores }}
+  STORES_API_BASE_URL: {{ .Values.app.endpoints.stores }}
+  {{- end }}
+  {{- if .Values.app.endpoints.cart }}
+  CART_API_BASE_URL: {{ .Values.app.endpoints.cart }}
+  {{- end }}
+  {{- if .Values.app.endpoints.checkout }}
+  CHECKOUT_API_BASE_URL: {{ .Values.app.endpoints.checkout }}
+  {{- end }}
+  {{- if .Values.app.endpoints.orders }}
+  ORDERS_API_BASE_URL: {{ .Values.app.endpoints.orders }}
+  {{- end }}
+  {{- if .Values.app.endpoints.courier }}
+  COURIER_API_BASE_URL: {{ .Values.app.endpoints.courier }}
+  {{- end }}
+{{- end }}

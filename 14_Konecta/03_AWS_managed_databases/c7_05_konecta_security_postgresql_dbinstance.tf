@@ -10,8 +10,8 @@ resource "aws_db_instance" "konecta_security_postgres" {
   vpc_security_group_ids = [aws_security_group.konecta_rds_postgresql_sg.id]
 
   db_name  = "konecta_security"
-  username = local.konecta_secret_json.username # Getting from c6_01 and AWS Secret Manager secret "konecta-db-secret"
-  password = local.konecta_secret_json.password # Getting from c6_01 and AWS Secret Manager secret "konecta-db-secret"
+  username = local.konecta_master_secret_json.username # Getting from c6_01 and AWS Secret Manager secret "konecta-db-secret"
+  password = local.konecta_master_secret_json.password # Getting from c6_01 and AWS Secret Manager secret "konecta-db-secret"
   port     = 5432
 
   multi_az            = false

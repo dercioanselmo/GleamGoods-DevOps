@@ -1,0 +1,130 @@
+# ============================================================================
+# FRONTEND SERVICE - CUSTOM VALUES
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# IMAGE CONFIGURATION
+# ----------------------------------------------------------------------------
+image:
+  repository: 564956047797.dkr.ecr.us-east-1.amazonaws.com/konecta/konecta-frontend
+  pullPolicy: IfNotPresent
+  tag: latest
+
+# ----------------------------------------------------------------------------
+# APPLICATION CONFIGURATION
+# ----------------------------------------------------------------------------
+app:
+  publicUrl: https://konecta.dercioanselmo.com
+
+  # NOTE: none of these backend services exist yet (only the frontend has
+  # been deployed so far) - these are the DNS names each service is
+  # expected to register under once it lands (matching the short,
+  # no-"-service"-suffix naming already used for the frontend's
+  # ServiceAccount and for the Pod Identity service accounts provisioned
+  # in 14_Konecta/03_AWS_managed_databases). Update any of these that end
+  # up different from what each service's own chart actually creates.
+  endpoints:
+    auth: http://security:80
+    stores: http://store-stock:80
+    cart: http://cart:80
+    checkout: http://checkout:80
+    orders: http://orders:80
+    courier: http://courier:80
+
+# ----------------------------------------------------------------------------
+# INGRESS CONFIGURATION - AWS ALB
+# ----------------------------------------------------------------------------
+# Joins the SAME ALB already used by gleamgoods.dercioanselmo.com: matching
+# group.name merges this Ingress's rules into that one load balancer
+# (host-based routing tells them apart) instead of provisioning a second
+# ALB. certificate-arn is the same ACM cert used there - confirm it's
+# actually a wildcard/SAN cert covering konecta.dercioanselmo.com too,
+# otherwise TLS/SNI for this host will fail even though the ALB is shared.
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/group.name: gleamgoods-ui
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health/liveness
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:564956047797:certificate/e27fa43e-60e8-4b71-ae4e-95e7e7cd3b46
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443},{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    # External DNS Annotation
+    external-dns.alpha.kubernetes.io/hostname: konecta.dercioanselmo.com
+  tls: []
+  hosts:
+    - konecta.dercioanselmo.com
+
+# ----------------------------------------------------------------------------
+# RESOURCE MANAGEMENT
+# ----------------------------------------------------------------------------
+resources:
+  limits:
+    cpu: 512m
+    memory: 512Mi
+  requests:
+    cpu: 256m
+    memory: 512Mi
+
+# ----------------------------------------------------------------------------
+# AUTOSCALING - HORIZONTAL POD AUTOSCALER (HPA)
+# ----------------------------------------------------------------------------
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+# ----------------------------------------------------------------------------
+# KARPENTER NODE SELECTION
+# ----------------------------------------------------------------------------
+# Schedule pods on Karpenter Spot nodes - same as GleamGoods' UI service
+nodeSelector:
+  karpenter.sh/capacity-type: spot
+
+# ----------------------------------------------------------------------------
+# TOPOLOGY SPREAD CONSTRAINTS
+# ----------------------------------------------------------------------------
+# Distribute pods across nodes AND availability zones for high availability
+topologySpreadConstraints:
+  # Spread across nodes (within same AZ) - Best effort
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: frontend
+        app.kubernetes.io/component: service
+        app.kubernetes.io/instance: frontend
+
+  # Spread across availability zones - Strict requirement
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: frontend
+        app.kubernetes.io/component: service
+        app.kubernetes.io/instance: frontend
+
+# ----------------------------------------------------------------------------
+# POD DISRUPTION BUDGET (PDB)
+# ----------------------------------------------------------------------------
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 2
+  maxUnavailable: 0
+
+# ----------------------------------------------------------------------------
+# OPENTELEMETRY
+# ----------------------------------------------------------------------------
+# Left disabled: unconfirmed whether the "default-instrumentation"
+# Instrumentation CR (used by GleamGoods, which runs in the `default`
+# namespace) is visible to/usable from the `konecta` namespace. Enable
+# once that's verified, otherwise pods may fail to get the SDK injected
+# or reference a resource that doesn't exist in this namespace.
+opentelemetry:
+  enabled: false
+  instrumentation: "default-instrumentation"
