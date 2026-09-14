@@ -44,7 +44,7 @@ ingress:
   enabled: true
   className: alb
   annotations:
-    alb.ingress.kubernetes.io/group.name: gleamgoods-ui
+    alb.ingress.kubernetes.io/group.name: gleamgoods
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/healthcheck-path: /actuator/health/liveness
