@@ -1,0 +1,5 @@
+apiVersion: v2
+name: konecta-mailpit-chart
+description: A Helm chart for Mailpit (SMTP sink + web UI) for Konecta's dev email notifications
+type: application
+version: 0.1.0

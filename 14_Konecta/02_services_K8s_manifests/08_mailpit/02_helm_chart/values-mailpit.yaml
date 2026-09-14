@@ -1,0 +1,29 @@
+# ============================================================================
+# MAILPIT - CUSTOM VALUES
+# ============================================================================
+# Dev SMTP sink + web UI: security-service (and any other Konecta backend
+# service that starts sending mail) points SMTP_HOST/SMTP_PORT at this
+# instead of a real mail provider, so you can see every email the app
+# sends without one actually leaving the cluster.
+
+nameOverride: "mailpit"
+fullnameOverride: "mailpit"
+
+# ----------------------------------------------------------------------------
+# INGRESS - joins the SAME shared ALB as gleamgoods/argocd/konecta
+# ----------------------------------------------------------------------------
+ingress:
+  className: alb
+  host: mailpit.dercioanselmo.com
+  annotations:
+    alb.ingress.kubernetes.io/group.name: gleamgoods
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:564956047797:certificate/169f2752-8de3-4533-9aae-ed32769b5ef4
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443},{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    external-dns.alpha.kubernetes.io/hostname: mailpit.dercioanselmo.com
+
+nodeSelector:
+  karpenter.sh/capacity-type: spot

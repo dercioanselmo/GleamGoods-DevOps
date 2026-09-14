@@ -42,6 +42,12 @@ app:
     KAFKA_BOOTSTRAP_SERVERS: ""
     KONECTA_KAFKA_ENABLED: "false"
     TZ: "Africa/Maputo"
+    # Mailpit (14_Konecta/02_services_K8s_manifests/08_mailpit) - dev SMTP
+    # sink, no auth/TLS needed (matches this app's mail.properties.smtp
+    # auth:false / starttls.enable:false). View captured mail at
+    # https://mailpit.dercioanselmo.com (basic-auth protected).
+    SMTP_HOST: "mailpit"
+    SMTP_PORT: "1025"
     # Sits behind the ALB (TLS terminates there) - without this, Spring
     # computes the OAuth2 "{baseUrl}" from the raw incoming request
     # (http://, wrong scheme) instead of honoring the ALB's

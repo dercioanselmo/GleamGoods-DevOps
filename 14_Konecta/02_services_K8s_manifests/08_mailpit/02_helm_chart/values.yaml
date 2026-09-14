@@ -1,0 +1,42 @@
+# Default values for Mailpit (SMTP sink + web UI for dev email notifications).
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: docker.io/axllent/mailpit
+  pullPolicy: IfNotPresent
+  # "latest" is not sha-pinned - fine for a dev-only mail sink, but pin an
+  # explicit version tag if reproducibility ever matters here.
+  tag: "latest"
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1000
+
+resources:
+  limits:
+    memory: 256Mi
+  requests:
+    cpu: 50m
+    memory: 128Mi
+
+nodeSelector: {}
+
+# K8s Secret (created via kubectl, NOT in git) holding MP_UI_AUTH
+# ("username:password") for Mailpit's built-in web UI basic auth - the UI
+# is reachable on the public shared ALB and shows every email the app
+# sends (including OTP codes), so it must not be left open.
+uiAuthSecretName: "mailpit-ui-auth"
+
+ingress:
+  className: alb
+  annotations: {}
+  host: ""

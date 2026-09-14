@@ -62,17 +62,21 @@ spec:
             - name: http
               containerPort: {{ .Values.app.port }}
               protocol: TCP
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: {{ .Values.app.port }}
+            failureThreshold: 30
+            periodSeconds: 5
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
               port: {{ .Values.app.port }}
-            initialDelaySeconds: 20
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
               port: {{ .Values.app.port }}
-            initialDelaySeconds: 40
             periodSeconds: 15
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
