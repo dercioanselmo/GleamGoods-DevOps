@@ -1,0 +1,93 @@
+# ============================================================================
+# SECURITY SERVICE - CUSTOM VALUES
+# ============================================================================
+
+image:
+  repository: 564956047797.dkr.ecr.us-east-1.amazonaws.com/konecta/konecta-security-service
+  pullPolicy: IfNotPresent
+  tag: latest
+
+fullnameOverride: "security"
+
+app:
+  port: 8091
+
+  db:
+    host: "konecta-security.cipcmuog8z8q.us-east-1.rds.amazonaws.com"
+    port: 5432
+    name: "konecta_security"
+    secret:
+      useSecretsManager: true
+      secretName: "konecta-db-secret"
+      k8sSecretName: "security-db"
+
+  eureka:
+    enabled: false
+
+  # security-service is the root of trust - it doesn't call any other
+  # Konecta service.
+  upstreams: {}
+
+  extraEnv:
+    JWT_ACCESS_TTL_SECONDS: "900"
+    JWT_REFRESH_TTL_SECONDS: "1209600"
+    JWT_ISSUER: "konecta-security-service"
+    OTP_CODE_LENGTH: "6"
+    OTP_TTL_SECONDS: "300"
+    OTP_MAX_ATTEMPTS: "5"
+    OTP_MAX_REQUESTS_PER_HOUR: "5"
+    OAUTH_FRONTEND_REDIRECT_URI: "https://konecta.dercioanselmo.com/auth/callback"
+    CORS_ALLOWED_ORIGINS: "https://konecta.dercioanselmo.com"
+    KAFKA_BOOTSTRAP_SERVERS: ""
+    KONECTA_KAFKA_ENABLED: "false"
+    TZ: "Africa/Maputo"
+
+  # Google OAuth client id/secret - kept in the security-only
+  # konecta-security-oauth Secret (created via kubectl, not in git),
+  # not the cluster-wide sharedSecretsRef.
+  extraSecretRefs:
+    - konecta-security-oauth
+
+resources:
+  limits:
+    cpu: 512m
+    memory: 512Mi
+  requests:
+    cpu: 128m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector:
+  karpenter.sh/capacity-type: spot
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: security
+        app.kubernetes.io/component: service
+        app.kubernetes.io/instance: security
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: security
+        app.kubernetes.io/component: service
+        app.kubernetes.io/instance: security
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 2
+  maxUnavailable: 0
+
+opentelemetry:
+  enabled: false
+  instrumentation: "default-instrumentation"

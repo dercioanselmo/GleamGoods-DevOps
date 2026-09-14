@@ -1,0 +1,85 @@
+# ============================================================================
+# CART SERVICE - CUSTOM VALUES
+# ============================================================================
+
+image:
+  repository: 564956047797.dkr.ecr.us-east-1.amazonaws.com/konecta/konecta-cart-service
+  pullPolicy: IfNotPresent
+  tag: latest
+
+fullnameOverride: "cart"
+
+app:
+  port: 8093
+
+  db:
+    host: "konecta-cart.cipcmuog8z8q.us-east-1.rds.amazonaws.com"
+    port: 5432
+    name: "konecta_cart"
+    secret:
+      useSecretsManager: true
+      secretName: "konecta-db-secret"
+      k8sSecretName: "cart-db"
+
+  eureka:
+    enabled: false
+
+  upstreams:
+    SECURITY_SERVICE_URL: "http://security:80"
+    STORES_SERVICE_URL: "http://store-stock:80"
+
+  extraEnv:
+    KAFKA_BOOTSTRAP_SERVERS: ""
+    TZ: "Africa/Maputo"
+    AWS_REGION: "us-east-1"
+    AWS_S3_BUCKET: "konecta-media-564956047797"
+    AWS_S3_STORES_PREFIX: "stores/"
+    AWS_S3_PRODUCTS_PREFIX: "products/"
+    AWS_S3_USERS_PREFIX: "users/"
+    AWS_S3_CATEGORIES_PREFIX: "categories/"
+    AWS_S3_PRESIGN_PUT_TTL_SECONDS: "300"
+    AWS_S3_PRESIGN_GET_TTL_SECONDS: "3600"
+
+resources:
+  limits:
+    cpu: 512m
+    memory: 512Mi
+  requests:
+    cpu: 128m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector:
+  karpenter.sh/capacity-type: spot
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: cart
+        app.kubernetes.io/component: service
+        app.kubernetes.io/instance: cart
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: cart
+        app.kubernetes.io/component: service
+        app.kubernetes.io/instance: cart
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 2
+  maxUnavailable: 0
+
+opentelemetry:
+  enabled: false
+  instrumentation: "default-instrumentation"

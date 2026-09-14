@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: konecta-checkout
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/dercioanselmo/GleamGoods-DevOps.git
+    targetRevision: main
+    path: 14_Konecta/02_services_K8s_manifests/05_checkout_service/02_helm_chart
+    helm:
+      valueFiles:
+        - values-checkout.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: konecta
+  syncPolicy:
+    automated:
+      prune: true    # Auto-delete resources not in Git
+      selfHeal: true # Auto-sync if drift detected
+    syncOptions:
+      - CreateNamespace=true

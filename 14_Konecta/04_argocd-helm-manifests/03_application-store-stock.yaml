@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: konecta-store-stock
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/dercioanselmo/GleamGoods-DevOps.git
+    targetRevision: main
+    path: 14_Konecta/02_services_K8s_manifests/03_stores_and_stock/02_helm_chart
+    helm:
+      valueFiles:
+        - values-store-stock.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: konecta
+  syncPolicy:
+    automated:
+      prune: true    # Auto-delete resources not in Git
+      selfHeal: true # Auto-sync if drift detected
+    syncOptions:
+      - CreateNamespace=true

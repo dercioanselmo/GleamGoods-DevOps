@@ -1,0 +1,99 @@
+# ============================================================================
+# ORDER SERVICE - CUSTOM VALUES
+# ============================================================================
+# order-service has no RDS instance / pod-identity association of its own
+# yet - per instruction, it shares checkout's database (same host/dbname)
+# and, since AWS Pod Identity associations are bound by exact (namespace,
+# service account) pair, it runs under the EXISTING "checkout" service
+# account (already bound to the shared Konecta getsecrets IAM role) rather
+# than creating a new one. Its own SecretProviderClass/K8s Secret
+# ("orders-db") is still separate from checkout's own, to avoid two Helm
+# releases both owning the same CSI-synced secret object.
+
+image:
+  repository: 564956047797.dkr.ecr.us-east-1.amazonaws.com/konecta/konecta-order-service
+  pullPolicy: IfNotPresent
+  tag: latest
+
+fullnameOverride: "orders"
+
+serviceAccount:
+  create: false
+  name: "checkout"
+
+app:
+  port: 8095
+
+  db:
+    host: "konecta-checkout.cipcmuog8z8q.us-east-1.rds.amazonaws.com"
+    port: 5432
+    name: "konecta_checkout"
+    secret:
+      useSecretsManager: true
+      secretName: "konecta-db-secret"
+      k8sSecretName: "orders-db"
+
+  eureka:
+    enabled: false
+
+  upstreams:
+    SECURITY_SERVICE_URL: "http://security:80"
+    STORES_SERVICE_URL: "http://store-stock:80"
+    CART_SERVICE_URL: "http://cart:80"
+    CHECKOUT_SERVICE_URL: "http://checkout:80"
+
+  extraEnv:
+    KAFKA_BOOTSTRAP_SERVERS: ""
+    TZ: "Africa/Maputo"
+    AWS_REGION: "us-east-1"
+    AWS_S3_BUCKET: "konecta-media-564956047797"
+    AWS_S3_STORES_PREFIX: "stores/"
+    AWS_S3_PRODUCTS_PREFIX: "products/"
+    AWS_S3_USERS_PREFIX: "users/"
+    AWS_S3_CATEGORIES_PREFIX: "categories/"
+    AWS_S3_PRESIGN_PUT_TTL_SECONDS: "300"
+    AWS_S3_PRESIGN_GET_TTL_SECONDS: "3600"
+
+resources:
+  limits:
+    cpu: 512m
+    memory: 512Mi
+  requests:
+    cpu: 128m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector:
+  karpenter.sh/capacity-type: spot
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: orders
+        app.kubernetes.io/component: service
+        app.kubernetes.io/instance: orders
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: orders
+        app.kubernetes.io/component: service
+        app.kubernetes.io/instance: orders
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 2
+  maxUnavailable: 0
+
+opentelemetry:
+  enabled: false
+  instrumentation: "default-instrumentation"

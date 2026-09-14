@@ -1,0 +1,116 @@
+# Default values shared by every Konecta backend service chart.
+# Per-service overrides live in values-<service>.yaml.
+
+replicaCount: 1
+
+image:
+  repository: ""
+  pullPolicy: IfNotPresent
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  limits:
+    memory: 512Mi
+  requests:
+    cpu: 128m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+topologySpreadConstraints: []
+
+metrics:
+  enabled: false
+
+configMap:
+  create: true
+  name:
+
+app:
+  # Container port the Spring Boot app actually listens on (SERVER_PORT).
+  port: 8080
+
+  # Shared K8s Secret (created out-of-band via kubectl, NOT in git) holding
+  # JWT_SECRET / AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY, common to every
+  # Konecta backend service.
+  db:
+    host: ""
+    port: 5432
+    name: ""
+    secret:
+      # All 5 Konecta databases currently share ONE Secrets Manager secret
+      # (RDS master username/password) - per-service app-user secrets
+      # (konecta-<service>-db-secret) are drafted in
+      # 14_Konecta/03_AWS_managed_databases/c9_*.tf but not yet applied/
+      # populated. Using the shared master secret is an accepted interim
+      # tradeoff (see that module's README "Rotation" section) - swap
+      # secretName below to the per-service secret once it exists, nothing
+      # else needs to change.
+      useSecretsManager: true
+      secretName: "konecta-db-secret"
+      region: "us-east-1"
+      k8sSecretName: "" # set per service, e.g. "cart-db"
+
+  eureka:
+    enabled: false
+
+  # Upstream service base URLs this service calls, keyed by the exact env
+  # var name each service's application.properties reads (see each repo's
+  # .env.example) - e.g. SECURITY_SERVICE_URL: http://security:80
+  upstreams: {}
+
+  # Any other non-secret env vars (S3 bucket/prefixes, TTLs, etc).
+  extraEnv: {}
+
+  # Extra K8s Secret names (created out-of-band) to envFrom in addition to
+  # sharedSecretsRef - e.g. security-service's Google OAuth client secret.
+  extraSecretRefs: []
+
+# Fixed-name K8s Secret (created once via kubectl, shared by every backend
+# service) holding JWT_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY.
+sharedSecretsRef: "konecta-shared-secrets"
+
+opentelemetry:
+  enabled: false
+  instrumentation: "default-instrumentation"
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 2
+  maxUnavailable: 1

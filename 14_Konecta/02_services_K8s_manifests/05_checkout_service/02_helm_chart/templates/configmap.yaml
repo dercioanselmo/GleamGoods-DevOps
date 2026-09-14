@@ -1,0 +1,15 @@
+{{- if .Values.configMap.create -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "backend.configMapName" . }}
+data:
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://{{ .Values.app.db.host }}:{{ .Values.app.db.port }}/{{ .Values.app.db.name }}"
+  EUREKA_CLIENT_ENABLED: {{ .Values.app.eureka.enabled | quote }}
+  {{- range $k, $v := .Values.app.upstreams }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}
+  {{- range $k, $v := .Values.app.extraEnv }}
+  {{ $k }}: {{ $v | quote }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,84 @@
+# ============================================================================
+# STORES-AND-STOCK SERVICE - CUSTOM VALUES
+# ============================================================================
+
+image:
+  repository: 564956047797.dkr.ecr.us-east-1.amazonaws.com/konecta/konecta-stores-and-stock-service
+  pullPolicy: IfNotPresent
+  tag: latest
+
+fullnameOverride: "store-stock"
+
+app:
+  port: 8092
+
+  db:
+    host: "konecta-store-stock.cipcmuog8z8q.us-east-1.rds.amazonaws.com"
+    port: 5432
+    name: "konecta_store_stock"
+    secret:
+      useSecretsManager: true
+      secretName: "konecta-db-secret"
+      k8sSecretName: "store-stock-db"
+
+  eureka:
+    enabled: false
+
+  upstreams:
+    SECURITY_SERVICE_URL: "http://security:80"
+
+  extraEnv:
+    KAFKA_BOOTSTRAP_SERVERS: ""
+    TZ: "Africa/Maputo"
+    AWS_REGION: "us-east-1"
+    AWS_S3_BUCKET: "konecta-media-564956047797"
+    AWS_S3_STORES_PREFIX: "stores/"
+    AWS_S3_PRODUCTS_PREFIX: "products/"
+    AWS_S3_USERS_PREFIX: "users/"
+    AWS_S3_CATEGORIES_PREFIX: "categories/"
+    AWS_S3_PRESIGN_PUT_TTL_SECONDS: "300"
+    AWS_S3_PRESIGN_GET_TTL_SECONDS: "3600"
+
+resources:
+  limits:
+    cpu: 512m
+    memory: 512Mi
+  requests:
+    cpu: 128m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector:
+  karpenter.sh/capacity-type: spot
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: store-stock
+        app.kubernetes.io/component: service
+        app.kubernetes.io/instance: store-stock
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: store-stock
+        app.kubernetes.io/component: service
+        app.kubernetes.io/instance: store-stock
+
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 2
+  maxUnavailable: 0
+
+opentelemetry:
+  enabled: false
+  instrumentation: "default-instrumentation"
