@@ -19,7 +19,9 @@ ingress:
     alb.ingress.kubernetes.io/group.name: gleamgoods
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/healthcheck-path: /
+    # / requires basic auth (401) once MP_UI_AUTH is set - /readyz is
+    # Mailpit's dedicated unauthenticated healthcheck endpoint.
+    alb.ingress.kubernetes.io/healthcheck-path: /readyz
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:564956047797:certificate/169f2752-8de3-4533-9aae-ed32769b5ef4
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443},{"HTTP": 80}]'
     alb.ingress.kubernetes.io/ssl-redirect: '443'

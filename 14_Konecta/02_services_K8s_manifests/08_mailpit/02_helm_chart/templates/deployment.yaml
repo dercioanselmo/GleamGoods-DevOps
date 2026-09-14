@@ -40,13 +40,16 @@ spec:
               protocol: TCP
           readinessProbe:
             httpGet:
-              path: /
+              # / requires basic auth (401) once MP_UI_AUTH is set - /readyz
+              # and /livez are Mailpit's dedicated unauthenticated
+              # healthcheck endpoints, made for exactly this.
+              path: /readyz
               port: 8025
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /
+              path: /livez
               port: 8025
             initialDelaySeconds: 10
             periodSeconds: 15
