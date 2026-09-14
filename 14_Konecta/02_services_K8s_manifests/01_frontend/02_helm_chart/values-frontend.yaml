@@ -8,7 +8,7 @@
 image:
   repository: 564956047797.dkr.ecr.us-east-1.amazonaws.com/konecta/konecta-frontend
   pullPolicy: IfNotPresent
-  tag: sha-c711921
+  tag: sha-58a7a5a
 
 # ----------------------------------------------------------------------------
 # APPLICATION CONFIGURATION
