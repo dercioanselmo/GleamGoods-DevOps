@@ -5,7 +5,7 @@
 image:
   repository: 564956047797.dkr.ecr.us-east-1.amazonaws.com/konecta/konecta-checkout-service
   pullPolicy: IfNotPresent
-  tag: sha-fe31453
+  tag: sha-edfde0c
 
 fullnameOverride: "checkout"
 
