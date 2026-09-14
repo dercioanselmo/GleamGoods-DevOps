@@ -5,7 +5,7 @@
 image:
   repository: 564956047797.dkr.ecr.us-east-1.amazonaws.com/konecta/konecta-stores-and-stock-service
   pullPolicy: IfNotPresent
-  tag: sha-7fca3a1
+  tag: sha-5b3f90a
 
 nameOverride: "store-stock"
 fullnameOverride: "store-stock"
