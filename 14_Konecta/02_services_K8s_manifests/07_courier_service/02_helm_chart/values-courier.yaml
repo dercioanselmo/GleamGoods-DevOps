@@ -5,7 +5,7 @@
 image:
   repository: 564956047797.dkr.ecr.us-east-1.amazonaws.com/konecta/konecta-courier-service
   pullPolicy: IfNotPresent
-  tag: sha-9fe7dd6
+  tag: sha-cb1c74b
 
 fullnameOverride: "courier"
 
