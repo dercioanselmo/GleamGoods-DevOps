@@ -15,6 +15,7 @@ image:
   pullPolicy: IfNotPresent
   tag: sha-3b8a31a
 
+nameOverride: "orders"
 fullnameOverride: "orders"
 
 serviceAccount:

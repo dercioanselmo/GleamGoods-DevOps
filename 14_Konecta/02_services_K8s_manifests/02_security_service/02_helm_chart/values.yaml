@@ -106,6 +106,13 @@ app:
 # service) holding JWT_SECRET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY.
 sharedSecretsRef: "konecta-shared-secrets"
 
+ingress:
+  enabled: false
+  className: alb
+  annotations: {}
+  host: ""
+  paths: []
+
 opentelemetry:
   enabled: false
   instrumentation: "default-instrumentation"

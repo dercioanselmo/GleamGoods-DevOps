@@ -7,6 +7,7 @@ image:
   pullPolicy: IfNotPresent
   tag: sha-d79b432
 
+nameOverride: "security"
 fullnameOverride: "security"
 
 app:
@@ -41,6 +42,12 @@ app:
     KAFKA_BOOTSTRAP_SERVERS: ""
     KONECTA_KAFKA_ENABLED: "false"
     TZ: "Africa/Maputo"
+    # Sits behind the ALB (TLS terminates there) - without this, Spring
+    # computes the OAuth2 "{baseUrl}" from the raw incoming request
+    # (http://, wrong scheme) instead of honoring the ALB's
+    # X-Forwarded-Proto: https header, and the redirect_uri Spring sends
+    # to Google won't match what's registered in Google Cloud Console.
+    SERVER_FORWARD_HEADERS_STRATEGY: "framework"
 
   # Google OAuth client id/secret - kept in the security-only
   # konecta-security-oauth Secret (created via kubectl, not in git),
@@ -87,6 +94,44 @@ podDisruptionBudget:
   enabled: false
   minAvailable: 2
   maxUnavailable: 0
+
+# ----------------------------------------------------------------------------
+# INGRESS - browser-facing Google OAuth paths ONLY
+# ----------------------------------------------------------------------------
+# security-service is otherwise internal-only (see the other 5 backend
+# services' charts, which all leave ingress.enabled: false). Google OAuth
+# is the one exception: the browser must hit these two exact paths
+# directly (Spring Security's own authorization-init and callback
+# endpoints), on the SAME host as the frontend
+# (konecta.dercioanselmo.com) - that's what's registered as the redirect
+# URI in Google Cloud Console, and an exact-match requirement Google
+# enforces. Joins the SAME shared ALB as konecta-frontend and argocd
+# (group.name: gleamgoods) via path-based routing rather than a second
+# ALB. group.order: "10" (lower = evaluated first) makes sure these two
+# specific paths are matched before the frontend's catch-all "/" rule
+# (group.order: "100" there) - otherwise the frontend would swallow them.
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/group.name: gleamgoods
+    alb.ingress.kubernetes.io/group.order: "10"
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health/readiness
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:564956047797:certificate/169f2752-8de3-4533-9aae-ed32769b5ef4
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443},{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    # No external-dns hostname annotation here on purpose - the
+    # konecta.dercioanselmo.com DNS record is already owned/created by
+    # konecta-frontend's ingress; this one only adds ALB listener rules
+    # under the same shared load balancer, not a new DNS record.
+  host: konecta.dercioanselmo.com
+  paths:
+    - path: /oauth2/authorization/google
+      pathType: Exact
+    - path: /login/oauth2/code/google
+      pathType: Exact
 
 opentelemetry:
   enabled: false

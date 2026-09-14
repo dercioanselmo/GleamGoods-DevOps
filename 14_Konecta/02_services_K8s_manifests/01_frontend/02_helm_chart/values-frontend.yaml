@@ -45,10 +45,18 @@ ingress:
   className: alb
   annotations:
     alb.ingress.kubernetes.io/group.name: gleamgoods
+    # Evaluated after security-service's more specific OAuth paths (see
+    # that chart's values-security.yaml, group.order: "10") - otherwise
+    # this catch-all "/" rule would shadow them.
+    alb.ingress.kubernetes.io/group.order: "100"
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/healthcheck-path: /actuator/health/liveness
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:564956047797:certificate/e27fa43e-60e8-4b71-ae4e-95e7e7cd3b46
+    # Wildcard cert (*.dercioanselmo.com) - NOT the gleamgoods-only cert.
+    # konecta.dercioanselmo.com needs SNI/TLS to match its own hostname;
+    # this is the same cert argocd.dercioanselmo.com uses on this same
+    # shared ALB.
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:564956047797:certificate/169f2752-8de3-4533-9aae-ed32769b5ef4
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS": 443},{"HTTP": 80}]'
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     # External DNS Annotation
