@@ -14,9 +14,13 @@ name: konecta
 # adjusted for three things K8s doesn't have here:
 #   - the K8s Service abstraction (every service reachable on :80) doesn't
 #     exist - containers talk to each other on their real app port instead
-#   - S3 uploads are being replaced with local-disk storage in the app
-#     itself (MEDIA_STORAGE_PATH below is a placeholder - update it once
-#     that lands)
+#   - S3 uploads are replaced with local-disk storage in the app itself
+#     (KONECTA_STORAGE_* below, on store-stock/courier only - see each
+#     service's own LocalFilesystemObjectStorageService/MediaController).
+#     Uploads/downloads go through the frontend's /api/media/* proxy
+#     routes, not straight to these services' own ports - the tunnel has
+#     no ingress rule for them (see cloudflared/config.yml), only the
+#     frontend and security-service are reachable from outside.
 #   - Postgres is NOT a container here - it runs natively on the host
 #     machine (already has the konecta-* databases + data), so every
 #     backend service reaches it via host.docker.internal instead of a
@@ -85,7 +89,7 @@ services:
       security:
         condition: service_started
     volumes:
-      - media-data:/data/media
+      - ${HOME}/konecta-media:/data/media
     ports:
       - "127.0.0.1:8092:8092"
     environment:
@@ -97,11 +101,21 @@ services:
       SECURITY_SERVICE_URL: http://security:8091
       KAFKA_BOOTSTRAP_SERVERS: ""
       TZ: Africa/Maputo
-      # Placeholder - the app's S3 upload code is being replaced with
-      # local-disk storage; swap this for whatever env var(s) that lands
-      # with. All 5 services below share the same media-data volume, same
-      # as they shared one S3 bucket (with different prefixes) before.
-      MEDIA_STORAGE_PATH: /data/media
+      # Local-disk storage replacing S3 (AWS account suspended) - see
+      # LocalFilesystemObjectStorageService/MediaController in this
+      # service's own repo. Shares the media-data volume with courier
+      # below, same as they shared one S3 bucket (with different key
+      # prefixes) before - no collision risk, S3KeyFactory's prefixes
+      # ("users/", "products/", "stores/", "categories/") already keep
+      # them apart.
+      KONECTA_STORAGE_PROVIDER: local
+      KONECTA_STORAGE_LOCAL_DIR: /data/media
+      # The tunnel only routes this hostname to the frontend (and the two
+      # OAuth paths to security) - this service's own port has no ingress
+      # rule, so the browser can't reach it directly. Point at the
+      # frontend's own proxy route instead, which forwards server-to-
+      # server over this same docker network.
+      KONECTA_STORAGE_PUBLIC_BASE_URL: https://konecta.dercioanselmo.com/api/media/store-stock
 
   cart:
     build: ../../../konecta/backend/konecta-cart-service
@@ -211,7 +225,12 @@ services:
       ORDERS_SERVICE_URL: http://orders:8095
       KAFKA_BOOTSTRAP_SERVERS: ""
       TZ: Africa/Maputo
-      MEDIA_STORAGE_PATH: /data/media
+      # See store-stock's own KONECTA_STORAGE_* comment above - same
+      # deal, same shared media-data volume, different key prefix
+      # ("couriers/").
+      KONECTA_STORAGE_PROVIDER: local
+      KONECTA_STORAGE_LOCAL_DIR: /data/media
+      KONECTA_STORAGE_PUBLIC_BASE_URL: https://konecta.dercioanselmo.com/api/media/courier
       COURIER_MAX_RECOMMENDED_ASSOCIATION_KM: "2.0"
 
   frontend:
