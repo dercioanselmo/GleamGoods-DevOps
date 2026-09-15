@@ -1,0 +1,235 @@
+name: konecta
+
+# ==============================================================================
+# Local, zero-cost deployment of the whole Konecta stack (frontend + 6
+# backend services + Postgres + Mailpit), replacing the AWS/EKS setup in
+# ../14_Konecta while the AWS account is suspended (that Terraform is
+# untouched - this is a separate, parallel deployment path for now).
+# Exposed to the internet via Cloudflare Tunnel (see
+# cloudflared/config.yml) on the SAME domain (konecta.dercioanselmo.com)
+# already registered as the Google OAuth redirect URI - no re-registration
+# needed.
+#
+# Env var names/values mirror what's wired in ../14_Konecta exactly,
+# adjusted for three things K8s doesn't have here:
+#   - the K8s Service abstraction (every service reachable on :80) doesn't
+#     exist - containers talk to each other on their real app port instead
+#   - S3 uploads are being replaced with local-disk storage in the app
+#     itself (MEDIA_STORAGE_PATH below is a placeholder - update it once
+#     that lands)
+#   - Postgres is NOT a container here - it runs natively on the host
+#     machine (already has the konecta-* databases + data), so every
+#     backend service reaches it via host.docker.internal instead of a
+#     "postgres" service. Database names use hyphens
+#     (konecta-security, etc.) matching what's already there - NOT the
+#     underscore names used in the AWS RDS setup.
+#
+# Repo layout assumption: this directory lives in GleamGoods-DevOps, a
+# sibling of the konecta source repos (../../../konecta/...) - adjust the
+# build paths below if your clones are laid out differently.
+# ==============================================================================
+
+services:
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025" # web UI - only reachable via the tunnel's mailpit.dercioanselmo.com route, not directly
+    environment:
+      MP_UI_AUTH: ${MAILPIT_UI_AUTH}
+
+  security:
+    build: ../../../konecta/backend/konecta-security-service
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # no-op on Docker Desktop (Mac/Windows), needed on Linux
+    depends_on:
+      mailpit:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8091:8091"
+    environment:
+      SERVER_PORT: "8091"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-security
+      SPRING_DATASOURCE_USERNAME: apple
+      EUREKA_CLIENT_ENABLED: "false"
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TTL_SECONDS: "900"
+      JWT_REFRESH_TTL_SECONDS: "1209600"
+      JWT_ISSUER: konecta-security-service
+      OTP_CODE_LENGTH: "6"
+      OTP_TTL_SECONDS: "300"
+      OTP_MAX_ATTEMPTS: "5"
+      OTP_MAX_REQUESTS_PER_HOUR: "5"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      OAUTH_FRONTEND_REDIRECT_URI: https://konecta.dercioanselmo.com/auth/callback
+      CORS_ALLOWED_ORIGINS: https://konecta.dercioanselmo.com
+      KAFKA_BOOTSTRAP_SERVERS: ""
+      KONECTA_KAFKA_ENABLED: "false"
+      TZ: Africa/Maputo
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      # Cloudflare Tunnel terminates TLS and forwards X-Forwarded-Proto,
+      # same reason this was needed behind the AWS ALB - without it Spring
+      # computes the OAuth2 "{baseUrl}" as http://, which won't match the
+      # https:// redirect_uri registered in Google Cloud Console.
+      SERVER_FORWARD_HEADERS_STRATEGY: framework
+
+  store-stock:
+    build: ../../../konecta/backend/konecta-stores-and-stock-service
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      security:
+        condition: service_started
+    volumes:
+      - media-data:/data/media
+    ports:
+      - "127.0.0.1:8092:8092"
+    environment:
+      SERVER_PORT: "8092"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-store-stock
+      SPRING_DATASOURCE_USERNAME: apple
+      EUREKA_CLIENT_ENABLED: "false"
+      JWT_SECRET: ${JWT_SECRET}
+      SECURITY_SERVICE_URL: http://security:8091
+      KAFKA_BOOTSTRAP_SERVERS: ""
+      TZ: Africa/Maputo
+      # Placeholder - the app's S3 upload code is being replaced with
+      # local-disk storage; swap this for whatever env var(s) that lands
+      # with. All 5 services below share the same media-data volume, same
+      # as they shared one S3 bucket (with different prefixes) before.
+      MEDIA_STORAGE_PATH: /data/media
+
+  cart:
+    build: ../../../konecta/backend/konecta-cart-service
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      security:
+        condition: service_started
+      store-stock:
+        condition: service_started
+    volumes:
+      - media-data:/data/media
+    ports:
+      - "127.0.0.1:8093:8093"
+    environment:
+      SERVER_PORT: "8093"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-cart
+      SPRING_DATASOURCE_USERNAME: apple
+      EUREKA_CLIENT_ENABLED: "false"
+      JWT_SECRET: ${JWT_SECRET}
+      SECURITY_SERVICE_URL: http://security:8091
+      STORES_SERVICE_URL: http://store-stock:8092
+      KAFKA_BOOTSTRAP_SERVERS: ""
+      TZ: Africa/Maputo
+      MEDIA_STORAGE_PATH: /data/media
+
+  checkout:
+    build: ../../../konecta/backend/konecta-checkout-service
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      security:
+        condition: service_started
+      store-stock:
+        condition: service_started
+      cart:
+        condition: service_started
+    volumes:
+      - media-data:/data/media
+    ports:
+      - "127.0.0.1:8094:8094"
+    environment:
+      SERVER_PORT: "8094"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-checkout
+      SPRING_DATASOURCE_USERNAME: apple
+      EUREKA_CLIENT_ENABLED: "false"
+      JWT_SECRET: ${JWT_SECRET}
+      SECURITY_SERVICE_URL: http://security:8091
+      STORES_SERVICE_URL: http://store-stock:8092
+      CART_SERVICE_URL: http://cart:8093
+      KAFKA_BOOTSTRAP_SERVERS: ""
+      TZ: Africa/Maputo
+      MEDIA_STORAGE_PATH: /data/media
+
+  orders:
+    build: ../../../konecta/backend/konecta-order-service
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      checkout:
+        condition: service_started
+    volumes:
+      - media-data:/data/media
+    ports:
+      - "127.0.0.1:8095:8095"
+    environment:
+      SERVER_PORT: "8095"
+      # Shares checkout's database - same application-level decision as
+      # the AWS deployment.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-checkout
+      SPRING_DATASOURCE_USERNAME: apple
+      EUREKA_CLIENT_ENABLED: "false"
+      JWT_SECRET: ${JWT_SECRET}
+      SECURITY_SERVICE_URL: http://security:8091
+      STORES_SERVICE_URL: http://store-stock:8092
+      CART_SERVICE_URL: http://cart:8093
+      CHECKOUT_SERVICE_URL: http://checkout:8094
+      KAFKA_BOOTSTRAP_SERVERS: ""
+      TZ: Africa/Maputo
+      MEDIA_STORAGE_PATH: /data/media
+
+  courier:
+    build: ../../../konecta/backend/konecta-courier-service
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      orders:
+        condition: service_started
+    volumes:
+      - media-data:/data/media
+    ports:
+      - "127.0.0.1:8096:8096"
+    environment:
+      SERVER_PORT: "8096"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-courier
+      SPRING_DATASOURCE_USERNAME: apple
+      EUREKA_CLIENT_ENABLED: "false"
+      JWT_SECRET: ${JWT_SECRET}
+      SECURITY_SERVICE_URL: http://security:8091
+      STORES_SERVICE_URL: http://store-stock:8092
+      CART_SERVICE_URL: http://cart:8093
+      CHECKOUT_SERVICE_URL: http://checkout:8094
+      ORDERS_SERVICE_URL: http://orders:8095
+      KAFKA_BOOTSTRAP_SERVERS: ""
+      TZ: Africa/Maputo
+      MEDIA_STORAGE_PATH: /data/media
+      COURIER_MAX_RECOMMENDED_ASSOCIATION_KM: "2.0"
+
+  frontend:
+    build: ../../../konecta/konecta-frontend
+    restart: unless-stopped
+    depends_on:
+      security:
+        condition: service_started
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      NEXT_PUBLIC_APP_URL: https://konecta.dercioanselmo.com
+      AUTH_API_BASE_URL: http://security:8091
+      STORES_API_BASE_URL: http://store-stock:8092
+      CART_API_BASE_URL: http://cart:8093
+      CHECKOUT_API_BASE_URL: http://checkout:8094
+      ORDERS_API_BASE_URL: http://orders:8095
+      COURIER_API_BASE_URL: http://courier:8096
+
+volumes:
+  media-data:

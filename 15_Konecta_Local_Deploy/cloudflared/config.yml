@@ -1,0 +1,26 @@
+# cloudflared always writes the credentials file next to your origin cert
+# (~/.cloudflared/), regardless of cwd when you ran `tunnel create` - NOT
+# into this folder, whatever your working directory was at the time.
+tunnel: konecta-local
+credentials-file: /Users/apple/.cloudflared/9d174e2f-97cc-41a7-999f-61fd2b3658a9.json
+
+ingress:
+  # Google OAuth's two Spring Security endpoints - same path-based routing
+  # decision made on the AWS ALB (see
+  # GleamGoods-DevOps/14_Konecta/02_services_K8s_manifests/02_security_service/02_helm_chart/values-security.yaml)
+  # and for the same reason: Google's registered redirect URI is
+  # https://konecta.dercioanselmo.com/login/oauth2/code/google, which must
+  # be handled by security-service, not the frontend - but has to appear
+  # to be on the frontend's own domain.
+  - hostname: konecta.dercioanselmo.com
+    path: ^/(oauth2/authorization/google|login/oauth2/code/google)$
+    service: http://localhost:8091
+
+  - hostname: konecta.dercioanselmo.com
+    service: http://localhost:3000
+
+  - hostname: mailpit.dercioanselmo.com
+    service: http://localhost:8025
+
+  # Catch-all - required by cloudflared, must be last.
+  - service: http_status:404
