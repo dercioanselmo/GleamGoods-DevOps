@@ -17,10 +17,13 @@ name: konecta
 #   - S3 uploads are replaced with local-disk storage in the app itself
 #     (KONECTA_STORAGE_* below, on store-stock/courier only - see each
 #     service's own LocalFilesystemObjectStorageService/MediaController).
-#     Uploads/downloads go through the frontend's /api/media/* proxy
-#     routes, not straight to these services' own ports - the tunnel has
-#     no ingress rule for them (see cloudflared/config.yml), only the
-#     frontend and security-service are reachable from outside.
+#     Files land in ./media (a bind mount, not a named Docker volume) so
+#     they're browsable in Finder right alongside this compose file and
+#     survive `docker compose down`/rebuilds. Uploads/downloads go
+#     through the frontend's /api/media/* proxy routes, not straight to
+#     these services' own ports - the tunnel has no ingress rule for them
+#     (see cloudflared/config.yml), only the frontend and security-service
+#     are reachable from outside.
 #   - Postgres is NOT a container here - it runs natively on the host
 #     machine (already has the konecta-* databases + data), so every
 #     backend service reaches it via host.docker.internal instead of a
@@ -89,7 +92,7 @@ services:
       security:
         condition: service_started
     volumes:
-      - ${HOME}/konecta-media:/data/media
+      - ./media:/data/media
     ports:
       - "127.0.0.1:8092:8092"
     environment:
@@ -103,7 +106,7 @@ services:
       TZ: Africa/Maputo
       # Local-disk storage replacing S3 (AWS account suspended) - see
       # LocalFilesystemObjectStorageService/MediaController in this
-      # service's own repo. Shares the media-data volume with courier
+      # service's own repo. Shares the ./media bind mount with courier
       # below, same as they shared one S3 bucket (with different key
       # prefixes) before - no collision risk, S3KeyFactory's prefixes
       # ("users/", "products/", "stores/", "categories/") already keep
@@ -127,8 +130,6 @@ services:
         condition: service_started
       store-stock:
         condition: service_started
-    volumes:
-      - media-data:/data/media
     ports:
       - "127.0.0.1:8093:8093"
     environment:
@@ -141,7 +142,6 @@ services:
       STORES_SERVICE_URL: http://store-stock:8092
       KAFKA_BOOTSTRAP_SERVERS: ""
       TZ: Africa/Maputo
-      MEDIA_STORAGE_PATH: /data/media
 
   checkout:
     build: ../../../konecta/backend/konecta-checkout-service
@@ -156,7 +156,7 @@ services:
       cart:
         condition: service_started
     volumes:
-      - media-data:/data/media
+      - ./media:/data/media
     ports:
       - "127.0.0.1:8094:8094"
     environment:
@@ -181,7 +181,7 @@ services:
       checkout:
         condition: service_started
     volumes:
-      - media-data:/data/media
+      - ./media:/data/media
     ports:
       - "127.0.0.1:8095:8095"
     environment:
@@ -209,7 +209,7 @@ services:
       orders:
         condition: service_started
     volumes:
-      - media-data:/data/media
+      - ./media:/data/media
     ports:
       - "127.0.0.1:8096:8096"
     environment:
@@ -226,7 +226,7 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: ""
       TZ: Africa/Maputo
       # See store-stock's own KONECTA_STORAGE_* comment above - same
-      # deal, same shared media-data volume, different key prefix
+      # deal, same shared ./media bind mount, different key prefix
       # ("couriers/").
       KONECTA_STORAGE_PROVIDER: local
       KONECTA_STORAGE_LOCAL_DIR: /data/media
@@ -249,6 +249,3 @@ services:
       CHECKOUT_API_BASE_URL: http://checkout:8094
       ORDERS_API_BASE_URL: http://orders:8095
       COURIER_API_BASE_URL: http://courier:8096
-
-volumes:
-  media-data:
