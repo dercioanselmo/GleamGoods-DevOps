@@ -14,7 +14,7 @@ ingress:
   # to be on the frontend's own domain.
   - hostname: konecta.dercioanselmo.com
     path: ^/(oauth2/authorization/google|login/oauth2/code/google)$
-    service: http://localhost:8091
+    service: http://localhost:8280
 
   - hostname: konecta.dercioanselmo.com
     service: http://localhost:3000

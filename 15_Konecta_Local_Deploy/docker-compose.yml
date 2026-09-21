@@ -54,9 +54,9 @@ services:
       mailpit:
         condition: service_started
     ports:
-      - "127.0.0.1:8091:8091"
+      - "127.0.0.1:8280:8280"
     environment:
-      SERVER_PORT: "8091"
+      SERVER_PORT: "8280"
       SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-security
       SPRING_DATASOURCE_USERNAME: apple
       EUREKA_CLIENT_ENABLED: "false"
@@ -94,14 +94,14 @@ services:
     volumes:
       - ./media:/data/media
     ports:
-      - "127.0.0.1:8092:8092"
+      - "127.0.0.1:8281:8281"
     environment:
-      SERVER_PORT: "8092"
+      SERVER_PORT: "8281"
       SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-store-stock
       SPRING_DATASOURCE_USERNAME: apple
       EUREKA_CLIENT_ENABLED: "false"
       JWT_SECRET: ${JWT_SECRET}
-      SECURITY_SERVICE_URL: http://security:8091
+      SECURITY_SERVICE_URL: http://security:8280
       KAFKA_BOOTSTRAP_SERVERS: ""
       TZ: Africa/Maputo
       # Local-disk storage replacing S3 (AWS account suspended) - see
@@ -131,15 +131,15 @@ services:
       store-stock:
         condition: service_started
     ports:
-      - "127.0.0.1:8093:8093"
+      - "127.0.0.1:8282:8282"
     environment:
-      SERVER_PORT: "8093"
+      SERVER_PORT: "8282"
       SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-cart
       SPRING_DATASOURCE_USERNAME: apple
       EUREKA_CLIENT_ENABLED: "false"
       JWT_SECRET: ${JWT_SECRET}
-      SECURITY_SERVICE_URL: http://security:8091
-      STORES_SERVICE_URL: http://store-stock:8092
+      SECURITY_SERVICE_URL: http://security:8280
+      STORES_SERVICE_URL: http://store-stock:8281
       KAFKA_BOOTSTRAP_SERVERS: ""
       TZ: Africa/Maputo
 
@@ -158,16 +158,16 @@ services:
     volumes:
       - ./media:/data/media
     ports:
-      - "127.0.0.1:8094:8094"
+      - "127.0.0.1:8283:8283"
     environment:
-      SERVER_PORT: "8094"
+      SERVER_PORT: "8283"
       SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-checkout
       SPRING_DATASOURCE_USERNAME: apple
       EUREKA_CLIENT_ENABLED: "false"
       JWT_SECRET: ${JWT_SECRET}
-      SECURITY_SERVICE_URL: http://security:8091
-      STORES_SERVICE_URL: http://store-stock:8092
-      CART_SERVICE_URL: http://cart:8093
+      SECURITY_SERVICE_URL: http://security:8280
+      STORES_SERVICE_URL: http://store-stock:8281
+      CART_SERVICE_URL: http://cart:8282
       KAFKA_BOOTSTRAP_SERVERS: ""
       TZ: Africa/Maputo
       MEDIA_STORAGE_PATH: /data/media
@@ -183,19 +183,19 @@ services:
     volumes:
       - ./media:/data/media
     ports:
-      - "127.0.0.1:8095:8095"
+      - "127.0.0.1:8284:8284"
     environment:
-      SERVER_PORT: "8095"
+      SERVER_PORT: "8284"
       # Shares checkout's database - same application-level decision as
       # the AWS deployment.
       SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-checkout
       SPRING_DATASOURCE_USERNAME: apple
       EUREKA_CLIENT_ENABLED: "false"
       JWT_SECRET: ${JWT_SECRET}
-      SECURITY_SERVICE_URL: http://security:8091
-      STORES_SERVICE_URL: http://store-stock:8092
-      CART_SERVICE_URL: http://cart:8093
-      CHECKOUT_SERVICE_URL: http://checkout:8094
+      SECURITY_SERVICE_URL: http://security:8280
+      STORES_SERVICE_URL: http://store-stock:8281
+      CART_SERVICE_URL: http://cart:8282
+      CHECKOUT_SERVICE_URL: http://checkout:8283
       KAFKA_BOOTSTRAP_SERVERS: ""
       TZ: Africa/Maputo
       MEDIA_STORAGE_PATH: /data/media
@@ -211,18 +211,18 @@ services:
     volumes:
       - ./media:/data/media
     ports:
-      - "127.0.0.1:8096:8096"
+      - "127.0.0.1:8285:8285"
     environment:
-      SERVER_PORT: "8096"
+      SERVER_PORT: "8285"
       SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/konecta-courier
       SPRING_DATASOURCE_USERNAME: apple
       EUREKA_CLIENT_ENABLED: "false"
       JWT_SECRET: ${JWT_SECRET}
-      SECURITY_SERVICE_URL: http://security:8091
-      STORES_SERVICE_URL: http://store-stock:8092
-      CART_SERVICE_URL: http://cart:8093
-      CHECKOUT_SERVICE_URL: http://checkout:8094
-      ORDERS_SERVICE_URL: http://orders:8095
+      SECURITY_SERVICE_URL: http://security:8280
+      STORES_SERVICE_URL: http://store-stock:8281
+      CART_SERVICE_URL: http://cart:8282
+      CHECKOUT_SERVICE_URL: http://checkout:8283
+      ORDERS_SERVICE_URL: http://orders:8284
       KAFKA_BOOTSTRAP_SERVERS: ""
       TZ: Africa/Maputo
       # See store-stock's own KONECTA_STORAGE_* comment above - same
@@ -243,9 +243,9 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       NEXT_PUBLIC_APP_URL: https://konecta.dercioanselmo.com
-      AUTH_API_BASE_URL: http://security:8091
-      STORES_API_BASE_URL: http://store-stock:8092
-      CART_API_BASE_URL: http://cart:8093
-      CHECKOUT_API_BASE_URL: http://checkout:8094
-      ORDERS_API_BASE_URL: http://orders:8095
-      COURIER_API_BASE_URL: http://courier:8096
+      AUTH_API_BASE_URL: http://security:8280
+      STORES_API_BASE_URL: http://store-stock:8281
+      CART_API_BASE_URL: http://cart:8282
+      CHECKOUT_API_BASE_URL: http://checkout:8283
+      ORDERS_API_BASE_URL: http://orders:8284
+      COURIER_API_BASE_URL: http://courier:8285
